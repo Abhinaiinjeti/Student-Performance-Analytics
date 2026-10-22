@@ -142,7 +142,7 @@ class AppConfig:
     debug: bool = os.getenv("FLASK_DEBUG", "true").lower() in ("true", "1", "yes")
     secret_key: str = os.getenv("SECRET_KEY", "edupulse-dev-secret-key-change-in-prod-2026")
     port: int = int(os.getenv("PORT", "5000"))
-    host: str = os.getenv("HOST", "127.0.0.1")
+    host: str = os.getenv("HOST", "0.0.0.0")
     max_content_length: int = 50 * 1024 * 1024  # 50 MB Upload Limit
     storage: StorageConfig = field(default_factory=StorageConfig)
     spark: SparkConfig = field(default_factory=SparkConfig)
