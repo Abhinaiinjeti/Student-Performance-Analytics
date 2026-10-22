@@ -6,13 +6,24 @@ echo "======================================================="
 echo "  Setting up EduPulse Analytics on AWS EC2 Server"
 echo "======================================================="
 
-# 1. Update system packages
-echo "[1/5] Updating system packages..."
-sudo apt update -y
+# 1. Update system packages and install prerequisites
+echo "[1/4] Detecting operating system & installing dependencies..."
 
-# 2. Install Python3, venv, git, and Java Runtime (for PySpark)
-echo "[2/5] Installing Python, venv, git, and Java Runtime (JRE)..."
-sudo apt install -y python3 python3-pip python3-venv git default-jre
+if command -v apt-get &> /dev/null; then
+    echo "Detected Ubuntu / Debian (apt)"
+    sudo apt update -y
+    sudo apt install -y python3 python3-pip python3-venv git default-jre
+elif command -v dnf &> /dev/null; then
+    echo "Detected Amazon Linux / Fedora (dnf)"
+    sudo dnf update -y
+    sudo dnf install -y python3 python3-pip git java-17-amazon-corretto
+elif command -v yum &> /dev/null; then
+    echo "Detected Amazon Linux / CentOS (yum)"
+    sudo yum update -y
+    sudo yum install -y python3 python3-pip git java-17-amazon-corretto
+else
+    echo "Unknown package manager. Please ensure python3, git, and java are installed."
+fi
 
 # 3. Create virtual environment
 echo "[3/5] Creating Python virtual environment..."
