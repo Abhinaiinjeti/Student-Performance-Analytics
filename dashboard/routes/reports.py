@@ -11,6 +11,7 @@ from storage.local_storage import LocalStorage
 from services.analytics_service import AnalyticsService
 from services.project_service import ProjectService
 from src.report_generator import ReportGenerator
+from src.auth_service import login_required
 
 reports_bp = Blueprint("reports", __name__, url_prefix="/reports")
 logger = logging.getLogger(__name__)
@@ -21,6 +22,7 @@ def get_generator() -> ReportGenerator:
 
 
 @reports_bp.route("/")
+@login_required
 def index():
     """Renders the reports dashboard with export options, assessment filter, and dataset selector."""
     storage = LocalStorage()
@@ -73,6 +75,7 @@ def index():
 
 
 @reports_bp.route("/download/html")
+@login_required
 def download_html():
     """Renders or downloads the standalone printable executive HTML briefing."""
     dataset_id = request.args.get("dataset_id")
@@ -104,6 +107,7 @@ def download_html():
 
 
 @reports_bp.route("/download/csv")
+@login_required
 def download_csv():
     """Streams institutional CSV reports."""
     dataset_id = request.args.get("dataset_id")

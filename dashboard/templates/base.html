@@ -58,6 +58,7 @@
                             <i data-lucide="user" class="nav-icon"></i> Student Profile
                         </a>
                     </li>
+                    {% if not current_user or current_user.role != 'student' %}
                     <li class="nav-item">
                         <a class="nav-link {% if '/data-management' in request.path %}active{% endif %}" href="{{ url_for('data.catalog') }}">
                             <i data-lucide="file-up" class="nav-icon"></i> Data Management
@@ -68,16 +69,19 @@
                             <i data-lucide="edit-3" class="nav-icon"></i> Class Entry
                         </a>
                     </li>
+                    {% endif %}
                     <li class="nav-item">
                         <a class="nav-link {% if '/reports' in request.path %}active{% endif %}" href="{{ url_for('reports.index') }}">
                             <i data-lucide="file-text" class="nav-icon"></i> Reports
                         </a>
                     </li>
+                    {% if not current_user or current_user.role == 'admin' %}
                     <li class="nav-item">
                         <a class="nav-link {% if '/settings' in request.path %}active{% endif %}" href="{{ url_for('settings.index') }}">
                             <i data-lucide="settings" class="nav-icon"></i> Settings
                         </a>
                     </li>
+                    {% endif %}
                 </ul>
 
                 <div class="d-flex align-items-center gap-2">
@@ -85,7 +89,7 @@
                     <div class="dropdown">
                         <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 py-1 px-2 font-monospace fw-semibold" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="batchSelectorDropdownBtn" title="Current Academic Batch Project">
                             <i data-lucide="layers" style="width: 14px; height: 14px;" class="text-primary"></i>
-                            <span class="text-truncate" style="max-width: 180px;">{{ active_project.name if active_project else 'All Datasets (No Batch)' }}</span>
+                            <span class="text-truncate" style="max-width: 160px;">{{ active_project.name if active_project else 'All Datasets' }}</span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-2" style="min-width: 270px;">
                             <li class="dropdown-header extra-small text-uppercase fw-bold text-muted px-3">
@@ -110,6 +114,7 @@
                             {% else %}
                                 <li class="px-3 py-2 small text-muted">No projects found.</li>
                             {% endif %}
+                            {% if not current_user or current_user.role != 'student' %}
                             <li><hr class="dropdown-divider my-1"></li>
                             <li>
                                 <button type="button" class="dropdown-item px-3 py-2 text-primary small d-flex align-items-center gap-2 fw-semibold" data-bs-toggle="modal" data-bs-target="#createProjectModal">
@@ -121,15 +126,45 @@
                                     <i data-lucide="folder-cog" style="width: 15px; height: 15px;"></i> Manage / Remove Batches...
                                 </button>
                             </li>
+                            {% endif %}
                         </ul>
                     </div>
 
-                    <span class="badge badge-local-first d-none d-md-flex align-items-center gap-1">
-                        <i data-lucide="shield-check" class="badge-icon"></i> Local-First Secure
-                    </span>
-                    <a href="{{ url_for('monitor.index') }}" class="btn btn-outline-secondary btn-sm py-1 px-2" title="PySpark Big Data Engine Monitor">
+                    <a href="{{ url_for('monitor.index') }}" class="btn btn-outline-secondary btn-sm py-1 px-2 d-none d-lg-inline-flex" title="PySpark Big Data Engine Monitor">
                         <i data-lucide="cpu" class="btn-icon"></i>
                     </a>
+
+                    <!-- User Authentication Profile Menu -->
+                    {% if current_user %}
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-light border dropdown-toggle d-flex align-items-center gap-2 py-1 px-2 shadow-xs" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="userMenuDropdownBtn">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" style="width: 24px; height: 24px; font-size: 0.75rem; background: linear-gradient(135deg, {% if current_user.role == 'admin' %}#2563eb, #7c3aed{% elif current_user.role == 'faculty' %}#059669, #0d9488{% else %}#0284c7, #2563eb{% endif %});">
+                                {{ current_user.name[:1] }}
+                            </div>
+                            <span class="d-none d-md-inline-block small fw-semibold text-truncate" style="max-width: 120px;">{{ current_user.name }}</span>
+                            <span class="badge {% if current_user.role == 'admin' %}bg-primary{% elif current_user.role == 'faculty' %}bg-success{% else %}bg-info text-dark{% endif %} extra-small d-none d-sm-inline-block">
+                                {{ current_user.role|capitalize }}
+                            </span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-2" style="min-width: 240px;">
+                            <li class="px-3 py-2">
+                                <div class="fw-bold small text-dark">{{ current_user.name }}</div>
+                                <small class="text-muted extra-small d-block">{{ current_user.email }}</small>
+                                <span class="badge bg-light text-secondary border extra-small mt-1">{{ current_user.department }}</span>
+                            </li>
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li>
+                                <a class="dropdown-item px-3 py-2 small d-flex align-items-center gap-2 text-danger fw-semibold" href="{{ url_for('auth.logout') }}">
+                                    <i data-lucide="log-out" style="width: 15px; height: 15px;"></i> Sign Out
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    {% else %}
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-sm btn-primary d-flex align-items-center gap-1 shadow-sm py-1 px-3">
+                        <i data-lucide="log-in" style="width: 14px; height: 14px;"></i> Sign In
+                    </a>
+                    {% endif %}
                 </div>
             </div>
         </div>

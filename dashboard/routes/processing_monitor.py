@@ -7,6 +7,7 @@ from flask import Blueprint, render_template, request, jsonify, current_app, url
 from services.processing_service import ProcessingService
 from src.data_generator import SyntheticDataGenerator
 from storage.local_storage import LocalStorage
+from src.auth_service import role_required
 
 monitor_bp = Blueprint("monitor", __name__, url_prefix="/processing-monitor")
 logger = logging.getLogger(__name__)
@@ -18,6 +19,7 @@ def get_job_service() -> ProcessingService:
 
 
 @monitor_bp.route("/")
+@role_required("admin")
 def index():
     """Renders the PySpark Job Monitor & Synthetic Generator dashboard."""
     service = get_job_service()
@@ -32,6 +34,7 @@ def index():
 
 
 @monitor_bp.route("/api/generate-synthetic", methods=["POST"])
+@role_required("admin")
 def generate_synthetic():
     """API endpoint: Generates scalable synthetic academic benchmark datasets."""
     data = request.get_json() or {}
@@ -56,6 +59,7 @@ def generate_synthetic():
 
 
 @monitor_bp.route("/api/launch-spark-job", methods=["POST"])
+@role_required("admin")
 def launch_spark_job():
     """API endpoint: Enqueues an asynchronous batch PySpark processing job."""
     data = request.get_json() or {}

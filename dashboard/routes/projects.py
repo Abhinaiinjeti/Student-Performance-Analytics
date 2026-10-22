@@ -4,6 +4,7 @@ EduPulse Analytics - Academic Batch Projects & Cohort Workspace Routes
 import logging
 from flask import Blueprint, request, jsonify, redirect, url_for, session, flash
 from services.project_service import ProjectService
+from src.auth_service import login_required, role_required
 
 projects_bp = Blueprint("projects", __name__, url_prefix="/projects")
 logger = logging.getLogger(__name__)
@@ -14,6 +15,7 @@ def get_project_service() -> ProjectService:
 
 
 @projects_bp.route("/api/list", methods=["GET"])
+@login_required
 def list_projects():
     """Returns all registered academic batch projects."""
     service = get_project_service()
@@ -27,6 +29,7 @@ def list_projects():
 
 
 @projects_bp.route("/api/create", methods=["POST"])
+@role_required("admin", "faculty")
 def create_project():
     """Creates a new batch project (e.g. 2023 - 2027 Batch)."""
     service = get_project_service()
@@ -90,6 +93,7 @@ def create_project():
 
 
 @projects_bp.route("/api/select", methods=["POST"])
+@login_required
 def select_active_project():
     """Switches the active academic batch project."""
     service = get_project_service()
@@ -115,6 +119,7 @@ def select_active_project():
 
 
 @projects_bp.route("/api/delete/<project_id>", methods=["POST", "DELETE"])
+@role_required("admin", "faculty")
 def delete_project(project_id: str):
     """Deletes an academic batch project."""
     service = get_project_service()

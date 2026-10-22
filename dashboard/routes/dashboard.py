@@ -6,6 +6,7 @@ import logging
 from flask import Blueprint, render_template, request, jsonify
 from services.analytics_service import AnalyticsService
 from storage.local_storage import LocalStorage
+from src.auth_service import login_required
 
 dash_bp = Blueprint("dashboard", __name__, url_prefix="/dashboard")
 logger = logging.getLogger(__name__)
@@ -16,6 +17,7 @@ def get_service() -> AnalyticsService:
 
 
 @dash_bp.route("/")
+@login_required
 def index():
     """Renders the executive institutional performance dashboard."""
     service = get_service()

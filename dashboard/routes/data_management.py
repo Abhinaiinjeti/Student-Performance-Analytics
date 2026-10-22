@@ -11,6 +11,7 @@ from storage.local_storage import LocalStorage
 from src.import_service import ImportService
 from src.data_validation import DataValidationService
 from services.project_service import ProjectService
+from src.auth_service import login_required, role_required
 
 data_bp = Blueprint("data", __name__, url_prefix="/data-management")
 logger = logging.getLogger(__name__)
@@ -23,6 +24,7 @@ def get_import_service() -> ImportService:
 
 
 @data_bp.route("/")
+@login_required
 def catalog():
     """Renders the Dataset Library & Catalog with registered manifests and project badges."""
     storage = LocalStorage()
@@ -47,12 +49,14 @@ def catalog():
 
 @data_bp.route("/import")
 @data_bp.route("/import-wizard")
+@role_required("admin", "faculty")
 def import_wizard():
     """Renders the Universal Guided Spreadsheet Import Wizard."""
     return render_template("import_wizard.html")
 
 
 @data_bp.route("/api/inspect", methods=["POST"])
+@role_required("admin", "faculty")
 def inspect_file():
     """API endpoint: Uploads and inspects workbook structure, sheets, layouts & headers."""
     if "file" not in request.files:
@@ -76,6 +80,7 @@ def inspect_file():
 
 
 @data_bp.route("/api/preview", methods=["POST"])
+@role_required("admin", "faculty")
 def preview_mapping():
     """API endpoint: Generates live preview with unpivoting and validation scorecard."""
     if "file" not in request.files:
@@ -130,6 +135,7 @@ def preview_mapping():
 
 
 @data_bp.route("/api/commit", methods=["POST"])
+@role_required("admin", "faculty")
 def commit_dataset():
     """API endpoint: Commits validated dataset (unpivoting if wide) and generates manifest."""
     if "file" not in request.files:
@@ -202,6 +208,7 @@ def get_manifest_json(dataset_id: str):
 
 
 @data_bp.route("/api/dataset/<dataset_id>", methods=["DELETE", "POST"])
+@role_required("admin", "faculty")
 def remove_dataset(dataset_id: str):
     """API endpoint: Permanently removes a dataset and its associated files."""
     storage = LocalStorage()
@@ -226,6 +233,7 @@ def remove_dataset(dataset_id: str):
 
 
 @data_bp.route("/api/datasets/delete-all", methods=["DELETE", "POST"])
+@role_required("admin")
 def remove_all_datasets():
     """API endpoint: Permanently removes all datasets and associated lakehouse artifacts."""
     storage = LocalStorage()
@@ -243,6 +251,7 @@ def remove_all_datasets():
 
 
 @data_bp.route("/api/sync/estimate/<dataset_id>", methods=["GET"])
+@role_required("admin", "faculty")
 def get_sync_estimate(dataset_id: str):
     """API endpoint: Pre-flight payload calculation, cost breakdown, and single-use confirmation token."""
     from storage.s3_storage import S3StorageAdapter
@@ -259,6 +268,7 @@ def get_sync_estimate(dataset_id: str):
 
 
 @data_bp.route("/api/sync/execute", methods=["POST"])
+@role_required("admin", "faculty")
 def execute_cloud_sync():
     """API endpoint: Validates token and executes (live or simulated) S3 synchronization."""
     from storage.s3_storage import S3StorageAdapter

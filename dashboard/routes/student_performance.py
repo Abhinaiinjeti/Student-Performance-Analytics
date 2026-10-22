@@ -4,6 +4,7 @@ EduPulse Analytics - Student Performance Longitudinal Routes
 import logging
 from flask import Blueprint, render_template, request, jsonify
 from services.analytics_service import AnalyticsService
+from src.auth_service import login_required, role_required
 
 student_bp = Blueprint("student_performance", __name__, url_prefix="/student-performance")
 logger = logging.getLogger(__name__)
@@ -14,6 +15,7 @@ def get_service() -> AnalyticsService:
 
 
 @student_bp.route("/")
+@login_required
 def index():
     """Renders the individual student longitudinal performance trajectory."""
     from flask import session
@@ -48,6 +50,7 @@ def index():
 
 
 @student_bp.route("/api/clear-backlog", methods=["POST"])
+@role_required("admin", "faculty")
 def clear_backlog():
     """Endpoint to update and clear a student's backlog record."""
     service = get_service()

@@ -7,6 +7,7 @@ import logging
 from flask import Blueprint, render_template, request, jsonify, Response, current_app, redirect, url_for
 from storage.local_storage import LocalStorage
 from services.class_entry_service import ClassEntryService
+from src.auth_service import role_required
 
 class_bp = Blueprint("class_entry", __name__, url_prefix="/class-entry")
 logger = logging.getLogger(__name__)
@@ -18,12 +19,14 @@ def get_service() -> ClassEntryService:
 
 
 @class_bp.route("/")
+@role_required("admin", "faculty")
 def index():
     """Renders the editable class marks spreadsheet grid."""
     return render_template("class_entry.html")
 
 
 @class_bp.route("/api/drafts", methods=["GET"])
+@role_required("admin", "faculty")
 def list_drafts():
     """API endpoint: Lists existing saved drafts."""
     storage = LocalStorage()

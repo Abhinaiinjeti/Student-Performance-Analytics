@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In — EduPulse Analytics{% endblock %}
+
+{% block content %}
+<section class="py-5 position-relative overflow-hidden" style="min-height: calc(100vh - 160px); display: flex; align-items: center;">
+    <div class="hero-bg-glow"></div>
+    <div class="container position-relative">
+        <div class="row justify-content-center">
+            <div class="col-md-9 col-lg-7 col-xl-6">
+                <!-- Login Card -->
+                <div class="card border-0 shadow-lg rounded-4 overflow-hidden bg-white">
+                    <div class="p-4 p-sm-5">
+                        <!-- Branding Header -->
+                        <div class="text-center mb-4">
+                            <div class="brand-icon mx-auto mb-3" style="width: 48px; height: 48px; border-radius: 12px;">
+                                <i data-lucide="lock" style="width: 24px; height: 24px;"></i>
+                            </div>
+                            <h3 class="fw-bold mb-1 text-dark">Institutional Sign In</h3>
+                            <p class="text-muted small mb-0">
+                                EduPulse Analytics — Academic Big Data Intelligence Platform
+                            </p>
+                        </div>
+
+                        <!-- Flash Notification Messages -->
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show small d-flex align-items-center gap-2 mb-4" role="alert">
+                                    <i data-lucide="{% if category == 'success' %}check-circle{% elif category == 'danger' %}alert-circle{% else %}info{% endif %}" style="width: 18px; height: 18px; flex-shrink: 0;"></i>
+                                    <div>{{ message }}</div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+
+                        <!-- Quick Role Demo Selector -->
+                        <div class="mb-4 p-3 rounded-3 bg-light-subtle border">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span class="extra-small text-uppercase fw-bold text-muted">
+                                    <i data-lucide="zap" style="width: 12px; height: 12px;" class="text-warning me-1"></i> Quick Demo Access:
+                                </span>
+                                <span class="extra-small text-muted">Click to auto-fill</span>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-4">
+                                    <button type="button" class="btn btn-outline-primary btn-sm w-100 py-1 text-start" onclick="fillCredentials('admin@edupulse.edu', 'Admin@123', 'admin')" title="Prof. Admin (HOD) - Full System Control">
+                                        <div class="fw-bold extra-small text-truncate">👑 Admin / HOD</div>
+                                        <div class="text-muted extra-small" style="font-size: 0.65rem;">Full Rights</div>
+                                    </button>
+                                </div>
+                                <div class="col-4">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm w-100 py-1 text-start" onclick="fillCredentials('faculty@edupulse.edu', 'Faculty@123', 'faculty')" title="Faculty Member - Upload & Class Marks">
+                                        <div class="fw-bold extra-small text-truncate">👨‍🏫 Faculty</div>
+                                        <div class="text-muted extra-small" style="font-size: 0.65rem;">Upload & Edit</div>
+                                    </button>
+                                </div>
+                                <div class="col-4">
+                                    <button type="button" class="btn btn-outline-info btn-sm w-100 py-1 text-start" onclick="fillCredentials('student@edupulse.edu', 'Student@123', 'student')" title="Student - View Only Analytics">
+                                        <div class="fw-bold extra-small text-truncate">🎓 Student</div>
+                                        <div class="text-muted extra-small" style="font-size: 0.65rem;">View Only</div>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Login Form -->
+                        <form method="POST" action="{{ url_for('auth.login') }}" id="loginForm">
+                            <input type="hidden" name="next" value="{{ next }}">
+
+                            <div class="mb-3">
+                                <label for="identifier" class="form-label small fw-semibold text-dark">Email or Username</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0 text-muted">
+                                        <i data-lucide="user" style="width: 16px; height: 16px;"></i>
+                                    </span>
+                                    <input type="text" class="form-control border-start-0 ps-0" id="identifier" name="identifier" value="{{ identifier or '' }}" placeholder="e.g. admin@edupulse.edu or admin" required autocomplete="username" autofocus>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label for="password" class="form-label small fw-semibold text-dark mb-0">Password</label>
+                                    <span class="extra-small text-muted" id="selectedRoleLabel"></span>
+                                </div>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0 text-muted">
+                                        <i data-lucide="key" style="width: 16px; height: 16px;"></i>
+                                    </span>
+                                    <input type="password" class="form-control border-start-0 border-end-0 ps-0 font-monospace" id="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+                                    <button type="button" class="btn btn-outline-light border border-start-0 text-muted" onclick="togglePasswordVisibility()" title="Toggle password visibility">
+                                        <i data-lucide="eye" id="passwordToggleIcon" style="width: 16px; height: 16px;"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="remember" name="remember" checked>
+                                    <label class="form-check-label small text-muted" for="remember">
+                                        Remember me
+                                    </label>
+                                </div>
+                                <span class="badge bg-light text-secondary border extra-small">
+                                    <i data-lucide="shield" style="width: 10px; height: 10px;" class="me-1"></i> AES-256 Protected
+                                </span>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100 py-2 d-flex align-items-center justify-content-center gap-2 fw-semibold shadow-sm" id="submitBtn">
+                                <i data-lucide="log-in" style="width: 18px; height: 18px;"></i> Sign In to Dashboard
+                            </button>
+                        </form>
+
+                        <div class="text-center mt-4 pt-3 border-top">
+                            <a href="{{ url_for('core.landing') }}" class="text-decoration-none small text-muted d-inline-flex align-items-center gap-1">
+                                <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i> Back to Public Overview
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Role Permissions Footer Matrix -->
+                    <div class="bg-light-subtle px-4 py-3 border-top">
+                        <div class="row g-2 extra-small text-muted text-center">
+                            <div class="col-4 border-end">
+                                <span class="fw-bold d-block text-dark">Admin (HOD)</span>
+                                <span>Upload · AWS · Batches</span>
+                            </div>
+                            <div class="col-4 border-end">
+                                <span class="fw-bold d-block text-dark">Faculty</span>
+                                <span>Upload · Marks · Reports</span>
+                            </div>
+                            <div class="col-4">
+                                <span class="fw-bold d-block text-dark">Student</span>
+                                <span>View Results & Profile</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function fillCredentials(id, pwd, roleName) {
+    document.getElementById('identifier').value = id;
+    document.getElementById('password').value = pwd;
+    const label = document.getElementById('selectedRoleLabel');
+    if (label) {
+        label.textContent = 'Selected: ' + roleName.toUpperCase();
+        label.className = 'extra-small text-primary fw-bold';
+    }
+    // Highlight submit button
+    const btn = document.getElementById('submitBtn');
+    btn.classList.add('btn-success');
+    btn.classList.remove('btn-primary');
+    setTimeout(() => {
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-primary');
+    }, 600);
+}
+
+function togglePasswordVisibility() {
+    const pwdInput = document.getElementById('password');
+    const icon = document.getElementById('passwordToggleIcon');
+    if (pwdInput.type === 'password') {
+        pwdInput.type = 'text';
+        icon.setAttribute('data-lucide', 'eye-off');
+    } else {
+        pwdInput.type = 'password';
+        icon.setAttribute('data-lucide', 'eye');
+    }
+    if (window.lucide) lucide.createIcons();
+}
+</script>
+{% endblock %}

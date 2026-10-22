@@ -3,6 +3,7 @@ import pandas as pd
 from flask import Blueprint, render_template, request, jsonify
 from services.analytics_service import AnalyticsService
 from storage.local_storage import LocalStorage
+from src.auth_service import login_required
 
 analysis_bp = Blueprint("academic_analysis", __name__, url_prefix="/academic-analysis")
 logger = logging.getLogger(__name__)
@@ -13,6 +14,7 @@ def get_service() -> AnalyticsService:
 
 
 @analysis_bp.route("/")
+@login_required
 def index():
     """Renders the subject, semester, and department academic analysis view."""
     service = get_service()

@@ -23,15 +23,23 @@
                 </p>
 
                 <div class="d-flex flex-wrap align-items-center gap-3 mb-4">
-                    <a href="#batches" class="btn btn-primary btn-lg shadow-sm d-flex align-items-center gap-2">
-                        <i data-lucide="layers"></i> Academic Batch Projects
+                    {% if not current_user %}
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg shadow-sm d-flex align-items-center gap-2">
+                        <i data-lucide="log-in"></i> Sign In to Portal
                     </a>
-                    <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline-primary btn-lg shadow-sm d-flex align-items-center gap-2">
-                        <i data-lucide="layout-dashboard"></i> Batch Dashboard
+                    <a href="#batches" class="btn btn-outline-primary btn-lg shadow-sm d-flex align-items-center gap-2">
+                        <i data-lucide="layers"></i> Academic Batches
                     </a>
+                    {% else %}
+                    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary btn-lg shadow-sm d-flex align-items-center gap-2">
+                        <i data-lucide="layout-dashboard"></i> Open Batch Dashboard
+                    </a>
+                    {% if current_user.role != 'student' %}
                     <a href="{{ url_for('data.import_wizard') }}" class="btn btn-outline-secondary btn-lg d-flex align-items-center gap-2">
                         <i data-lucide="upload"></i> Ingest Marksheet
                     </a>
+                    {% endif %}
+                    {% endif %}
                 </div>
 
                 <div class="hero-stats d-flex flex-wrap gap-4 pt-3 border-top border-light-subtle">

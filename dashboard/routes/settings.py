@@ -7,6 +7,7 @@ from flask import Blueprint, render_template, request, jsonify
 from config.assessment_rules import AssessmentRules, SubjectMarksRule
 from config.settings import get_config
 from storage.local_storage import LocalStorage
+from src.auth_service import role_required
 
 settings_bp = Blueprint("settings", __name__, url_prefix="/settings")
 logger = logging.getLogger(__name__)
@@ -16,6 +17,7 @@ global_rules = AssessmentRules()
 
 
 @settings_bp.route("/")
+@role_required("admin")
 def index():
     """Renders the system configuration and assessment settings view."""
     config = get_config()
@@ -60,6 +62,7 @@ def get_rules():
 
 
 @settings_bp.route("/api/rules", methods=["POST"])
+@role_required("admin")
 def update_rules():
     """Updates default assessment rules thresholds."""
     data = request.get_json()
@@ -91,6 +94,7 @@ def update_rules():
 
 
 @settings_bp.route("/api/aws", methods=["POST"])
+@role_required("admin")
 def update_aws_config_route():
     """API endpoint: Saves AWS Cloud Archiving settings and updates .env file."""
     from config.settings import save_env_config, AWSConfig
@@ -140,6 +144,7 @@ def update_aws_config_route():
 
 
 @settings_bp.route("/api/aws/test", methods=["POST"])
+@role_required("admin")
 def test_aws_connection_route():
     """API endpoint: Tests live S3 connectivity or validates simulation environment."""
     from config.settings import AWSConfig

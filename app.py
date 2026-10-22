@@ -43,9 +43,12 @@ def create_app(config: Optional[AppConfig] = None) -> Flask:
     app.config["EDUPULSE_CONFIG"] = config
 
     from dashboard.routes.projects import projects_bp, get_project_service
+    from dashboard.routes.auth import auth_bp
+    from src.auth_service import get_current_user
 
     # Register Blueprints
     app.register_blueprint(core_bp)
+    app.register_blueprint(auth_bp)
     app.register_blueprint(projects_bp)
     app.register_blueprint(data_bp)
     app.register_blueprint(class_bp)
@@ -57,14 +60,19 @@ def create_app(config: Optional[AppConfig] = None) -> Flask:
     app.register_blueprint(settings_bp)
 
     @app.context_processor
-    def inject_project_context():
+    def inject_template_globals():
+        context = {
+            "current_user": get_current_user(),
+            "all_projects": [],
+            "active_project": None
+        }
         try:
             ps = get_project_service()
-            all_p = ps.get_all_projects()
-            active_p = ps.get_active_project()
-            return dict(all_projects=all_p, active_project=active_p)
+            context["all_projects"] = ps.get_all_projects()
+            context["active_project"] = ps.get_active_project()
         except Exception:
-            return dict(all_projects=[], active_project=None)
+            pass
+        return context
 
     logger.info(f"EduPulse Analytics initialized in {config.env} mode. Local storage ready.")
     return app

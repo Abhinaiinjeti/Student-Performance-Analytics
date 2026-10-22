@@ -187,6 +187,7 @@ def test_aws_settings_api_routes():
     app = create_app()
     client = app.test_client()
 
+    orig_env = (PROJECT_ROOT / ".env").read_text("utf-8") if (PROJECT_ROOT / ".env").exists() else None
     try:
         # Test settings update
         res = client.post("/settings/api/aws", json={
@@ -216,7 +217,9 @@ def test_aws_settings_api_routes():
         for key in ["AWS_ENABLED", "AWS_SIMULATION_MODE", "AWS_S3_BUCKET", "AWS_REGION", "AWS_S3_PREFIX"]:
             os.environ.pop(key, None)
         env_f = PROJECT_ROOT / ".env"
-        if env_f.exists():
+        if orig_env is not None:
+            env_f.write_text(orig_env, "utf-8")
+        elif env_f.exists():
             env_f.unlink()
         get_config(reload=True)
 
