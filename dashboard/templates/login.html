@@ -44,22 +44,16 @@
                                 <span class="extra-small text-muted">Click to auto-fill</span>
                             </div>
                             <div class="row g-2">
-                                <div class="col-4">
-                                    <button type="button" class="btn btn-outline-primary btn-sm w-100 py-1 text-start" onclick="fillCredentials('admin@edupulse.edu', 'Admin@123', 'admin')" title="Department Administrator - Full System Control">
-                                        <div class="fw-bold extra-small text-truncate">👑 Admin / HOD</div>
-                                        <div class="text-muted extra-small" style="font-size: 0.65rem;">Full Rights</div>
+                                <div class="col-6">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm w-100 py-2 text-start" onclick="fillCredentials('faculty@edupulse.edu', 'Faculty@123', 'faculty')" title="Faculty Member - Upload & Class Marks">
+                                        <div class="fw-bold extra-small text-truncate">👨‍🏫 Faculty Member</div>
+                                        <div class="text-muted extra-small" style="font-size: 0.68rem;">Marksheet Upload & Entry</div>
                                     </button>
                                 </div>
-                                <div class="col-4">
-                                    <button type="button" class="btn btn-outline-secondary btn-sm w-100 py-1 text-start" onclick="fillCredentials('faculty@edupulse.edu', 'Faculty@123', 'faculty')" title="Faculty Member - Upload & Class Marks">
-                                        <div class="fw-bold extra-small text-truncate">👨‍🏫 Faculty</div>
-                                        <div class="text-muted extra-small" style="font-size: 0.65rem;">Upload & Edit</div>
-                                    </button>
-                                </div>
-                                <div class="col-4">
-                                    <button type="button" class="btn btn-outline-info btn-sm w-100 py-1 text-start" onclick="fillCredentials('student@edupulse.edu', 'Student@123', 'student')" title="Student - View Only Analytics">
-                                        <div class="fw-bold extra-small text-truncate">🎓 Student</div>
-                                        <div class="text-muted extra-small" style="font-size: 0.65rem;">View Only</div>
+                                <div class="col-6">
+                                    <button type="button" class="btn btn-outline-info btn-sm w-100 py-2 text-start" onclick="fillCredentials('student@edupulse.edu', 'Student@123', 'student')" title="Student - View Only Analytics">
+                                        <div class="fw-bold extra-small text-truncate">🎓 Student Portal</div>
+                                        <div class="text-muted extra-small" style="font-size: 0.68rem;">View Analytics & Results</div>
                                     </button>
                                 </div>
                             </div>
@@ -75,7 +69,7 @@
                                     <span class="input-group-text bg-white border-end-0 text-muted">
                                         <i data-lucide="user" style="width: 16px; height: 16px;"></i>
                                     </span>
-                                    <input type="text" class="form-control border-start-0 ps-0" id="identifier" name="identifier" value="{{ identifier or '' }}" placeholder="e.g. admin@edupulse.edu or admin" required autocomplete="username" autofocus>
+                                    <input type="text" class="form-control border-start-0 ps-0" id="identifier" name="identifier" value="{{ identifier or '' }}" placeholder="e.g. faculty@edupulse.edu or student" required autocomplete="username" autofocus>
                                 </div>
                             </div>
 
@@ -122,17 +116,13 @@
                     <!-- Role Permissions Footer Matrix -->
                     <div class="bg-light-subtle px-4 py-3 border-top">
                         <div class="row g-2 extra-small text-muted text-center">
-                            <div class="col-4 border-end">
-                                <span class="fw-bold d-block text-dark">Admin (HOD)</span>
-                                <span>Upload · AWS · Batches</span>
+                            <div class="col-6 border-end">
+                                <span class="fw-bold d-block text-dark">Faculty Member</span>
+                                <span>Upload · Class Marks · Reports</span>
                             </div>
-                            <div class="col-4 border-end">
-                                <span class="fw-bold d-block text-dark">Faculty</span>
-                                <span>Upload · Marks · Reports</span>
-                            </div>
-                            <div class="col-4">
-                                <span class="fw-bold d-block text-dark">Student</span>
-                                <span>View Results & Profile</span>
+                            <div class="col-6">
+                                <span class="fw-bold d-block text-dark">Student Portal</span>
+                                <span>View Results & Longitudinal Profile</span>
                             </div>
                         </div>
                     </div>
