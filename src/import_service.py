@@ -413,11 +413,11 @@ class ImportService:
         target_project_id = project_id
         try:
             from services.project_service import ProjectService
-            ps = ProjectService(config=self.config, storage=self.storage)
+            ps = ProjectService(storage=self.storage)
             if not target_project_id:
                 active_p = ps.get_active_project()
                 if active_p:
-                    target_project_id = active_p["project_id"]
+                    target_project_id = active_p.get("project_id") or active_p.get("id")
             if target_project_id:
                 ps.link_dataset_to_project(target_project_id, dataset_id)
         except Exception as e:

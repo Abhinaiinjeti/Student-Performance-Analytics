@@ -54,9 +54,8 @@ class AnalyticsService:
                 try:
                     from services.project_service import ProjectService
                     ps = ProjectService(config=self.config, storage=self.storage)
-                    proj = ps.get_project_by_id(project_id)
-                    if proj and proj.get("dataset_ids"):
-                        manifests = [m for m in manifests if m.get("dataset_id") in proj["dataset_ids"]]
+                    p_dataset_ids = set(ps.get_project_dataset_ids(project_id))
+                    manifests = [m for m in manifests if m.get("dataset_id") in p_dataset_ids]
                 except Exception as e:
                     logger.warning(f"Error scoping datasets to project {project_id}: {e}")
 
@@ -133,9 +132,8 @@ class AnalyticsService:
             try:
                 from services.project_service import ProjectService
                 ps = ProjectService(config=self.config, storage=self.storage)
-                proj = ps.get_project_by_id(project_id)
-                if proj and proj.get("dataset_ids"):
-                    manifests = [m for m in manifests if m.get("dataset_id") in proj["dataset_ids"]]
+                p_dataset_ids = set(ps.get_project_dataset_ids(project_id))
+                manifests = [m for m in manifests if m.get("dataset_id") in p_dataset_ids]
             except Exception:
                 pass
 
@@ -206,9 +204,8 @@ class AnalyticsService:
             try:
                 from services.project_service import ProjectService
                 ps = ProjectService(config=self.config, storage=self.storage)
-                proj = ps.get_project_by_id(project_id)
-                if proj and proj.get("dataset_ids"):
-                    manifests = [m for m in manifests if m.get("dataset_id") in proj["dataset_ids"]]
+                p_dataset_ids = set(ps.get_project_dataset_ids(project_id))
+                manifests = [m for m in manifests if m.get("dataset_id") in p_dataset_ids]
             except Exception as e:
                 logger.warning(f"Error scoping datasets to project {project_id}: {e}")
 
@@ -343,12 +340,21 @@ class AnalyticsService:
         }
         return res
 
-    def get_sample_students(self, limit: int = 12) -> List[Dict[str, Any]]:
+    def get_sample_students(self, limit: int = 12, project_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """
-        Discovers student IDs across all validated datasets with department,
-        completed semester count, and sample roll numbers.
+        Discovers student IDs across validated datasets with department,
+        completed semester count, and sample roll numbers, scoped to project if specified.
         """
         manifests = self.storage.list_manifests()
+        if project_id and project_id != "ALL":
+            try:
+                from services.project_service import ProjectService
+                ps = ProjectService(config=self.config, storage=self.storage)
+                p_dataset_ids = set(ps.get_project_dataset_ids(project_id))
+                manifests = [m for m in manifests if m.get("dataset_id") in p_dataset_ids]
+            except Exception:
+                pass
+
         student_map = {}
         for m in manifests:
             v_path = self.config.storage.validated_dir / f"VAL_{m['dataset_id']}.csv"
@@ -383,13 +389,22 @@ class AnalyticsService:
             })
         return samples
 
-    def get_student_longitudinal_record(self, student_id: str) -> Optional[Dict[str, Any]]:
+    def get_student_longitudinal_record(self, student_id: str, project_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
         Looks up longitudinal performance trajectory for an individual student.
         Calculates cumulative CGPA, semester breakdowns, backlog tracking, and sanitized course history.
         """
         student_id_clean = student_id.strip()
         manifests = self.storage.list_manifests()
+        if project_id and project_id != "ALL":
+            try:
+                from services.project_service import ProjectService
+                ps = ProjectService(config=self.config, storage=self.storage)
+                p_dataset_ids = set(ps.get_project_dataset_ids(project_id))
+                manifests = [m for m in manifests if m.get("dataset_id") in p_dataset_ids]
+            except Exception:
+                pass
+
         all_student_records = []
 
         for m in manifests:

@@ -269,37 +269,43 @@ def test_data_management_delete_api(storage):
     assert res_404.status_code == 404
 
 
-def test_storage_delete_all_datasets(storage):
+def test_storage_delete_all_datasets(tmp_path):
     """Verify delete_all_datasets purges all datasets and clears all lakehouse artifacts."""
+    from config.settings import StorageConfig
+    cfg = StorageConfig(data_dir=tmp_path)
+    test_storage = LocalStorage(cfg)
     id1 = "test-del-all-1"
     id2 = "test-del-all-2"
 
     for did in [id1, id2]:
-        storage.save_manifest(did, {"dataset_id": did})
-        storage.save_validated_dataset(did, "student_id,marks\nS1,50\n")
-        storage.save_raw_upload(did, f"{did}.csv", b"raw_content")
-        storage.atomic_write_json(storage.config.analytics_dir / f"AGG_{did}.json", {"summary": {}})
+        test_storage.save_manifest(did, {"dataset_id": did})
+        test_storage.save_validated_dataset(did, "student_id,marks\nS1,50\n")
+        test_storage.save_raw_upload(did, f"{did}.csv", b"raw_content")
+        test_storage.atomic_write_json(test_storage.config.analytics_dir / f"AGG_{did}.json", {"summary": {}})
 
-    assert len(storage.list_manifests()) >= 2
+    assert len(test_storage.list_manifests()) >= 2
 
     # Execute purge all
-    deleted_count = storage.delete_all_datasets()
+    deleted_count = test_storage.delete_all_datasets()
     assert deleted_count >= 2
 
-    # Verify lakehouse is empty of datasets
-    assert len(storage.list_manifests()) == 0
-    assert len(list(storage.config.validated_dir.glob("VAL_*.csv"))) == 0
-    assert len(list(storage.config.raw_dir.glob("RAW_*.*"))) == 0
-    assert len(list(storage.config.analytics_dir.glob("AGG_*.json"))) == 0
+    # Verify isolated lakehouse is empty of datasets
+    assert len(test_storage.list_manifests()) == 0
+    assert len(list(test_storage.config.validated_dir.glob("VAL_*.csv"))) == 0
+    assert len(list(test_storage.config.raw_dir.glob("RAW_*.*"))) == 0
+    assert len(list(test_storage.config.analytics_dir.glob("AGG_*.json"))) == 0
 
 
-def test_data_management_delete_all_api(storage):
+def test_data_management_delete_all_api(tmp_path):
     """Verify POST /data-management/api/datasets/delete-all purges all datasets."""
+    from config.settings import AppConfig, StorageConfig
+    test_cfg = AppConfig(storage=StorageConfig(data_dir=tmp_path))
+    test_storage = LocalStorage(test_cfg.storage)
     id_test = "test-api-del-all-x"
-    storage.save_manifest(id_test, {"dataset_id": id_test})
-    storage.save_validated_dataset(id_test, "student_id,marks\nS1,90\n")
+    test_storage.save_manifest(id_test, {"dataset_id": id_test})
+    test_storage.save_validated_dataset(id_test, "student_id,marks\nS1,90\n")
 
-    app = create_app()
+    app = create_app(test_cfg)
     client = app.test_client()
 
     res = client.post("/data-management/api/datasets/delete-all")
@@ -308,6 +314,6 @@ def test_data_management_delete_all_api(storage):
     assert res_json["status"] == "success"
     assert res_json["deleted_count"] >= 1
 
-    # Verify manifests now empty
-    assert len(storage.list_manifests()) == 0
+    # Verify manifests now empty in test storage
+    assert len(test_storage.list_manifests()) == 0
 

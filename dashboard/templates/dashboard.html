@@ -220,9 +220,15 @@
             <i data-lucide="bar-chart-3" style="width: 36px; height: 36px;"></i>
         </div>
         <h4 class="fw-bold mb-2">No Analytical Data Available</h4>
+        {% if active_project and active_project.id != 'ALL' %}
+        <p class="text-muted max-w-700 mx-auto mb-4">
+            No academic datasets have been uploaded yet for <strong>{{ active_project.name }}</strong>. Ingest a faculty spreadsheet via the Import Wizard to begin analyzing this cohort.
+        </p>
+        {% else %}
         <p class="text-muted max-w-700 mx-auto mb-4">
             No processed academic datasets were detected in the local lakehouse. Ingest a faculty spreadsheet via the Import Wizard or generate benchmark data to view institutional analytics.
         </p>
+        {% endif %}
         <div class="d-flex justify-content-center gap-3">
             <a href="{{ url_for('data.import_wizard') }}" class="btn btn-primary d-flex align-items-center gap-2">
                 <i data-lucide="upload-cloud"></i> Launch Import Wizard

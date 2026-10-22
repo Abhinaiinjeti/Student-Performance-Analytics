@@ -6,10 +6,11 @@ across Wide and Long layouts and diverse assessment types.
 import json
 import logging
 from pathlib import Path
-from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, session
 from storage.local_storage import LocalStorage
 from src.import_service import ImportService
 from src.data_validation import DataValidationService
+from services.project_service import ProjectService
 
 data_bp = Blueprint("data", __name__, url_prefix="/data-management")
 logger = logging.getLogger(__name__)
@@ -23,12 +24,23 @@ def get_import_service() -> ImportService:
 
 @data_bp.route("/")
 def catalog():
-    """Renders the Dataset Library & Catalog with registered manifests."""
+    """Renders the Dataset Library & Catalog with registered manifests and project badges."""
     storage = LocalStorage()
     manifests = storage.list_manifests()
+    ps = ProjectService()
+    projects = ps.get_all_projects()
+    project_map = {p.get("project_id"): p.get("name") for p in projects}
+
+    augmented = []
+    for m in manifests:
+        m_copy = dict(m)
+        pid = m.get("project_id")
+        m_copy["project_name"] = project_map.get(pid) if pid else None
+        augmented.append(m_copy)
+
     return render_template(
         "data_management.html",
-        manifests=manifests,
+        manifests=augmented,
         total_datasets=len(manifests)
     )
 

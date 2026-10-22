@@ -496,9 +496,8 @@ class ReportGenerator:
             try:
                 from services.project_service import ProjectService
                 ps = ProjectService()
-                proj = ps.get_project_by_id(project_id)
-                if proj and proj.get("dataset_ids"):
-                    manifests = [m for m in manifests if m.get("dataset_id") in proj["dataset_ids"]]
+                p_dataset_ids = set(ps.get_project_dataset_ids(project_id))
+                manifests = [m for m in manifests if m.get("dataset_id") in p_dataset_ids]
             except Exception:
                 pass
 
@@ -592,9 +591,8 @@ class ReportGenerator:
             try:
                 from services.project_service import ProjectService
                 ps = ProjectService()
-                proj = ps.get_project_by_id(project_id)
-                if proj and proj.get("dataset_ids"):
-                    manifests = [m for m in manifests if m.get("dataset_id") in proj["dataset_ids"]]
+                p_dataset_ids = set(ps.get_project_dataset_ids(project_id))
+                manifests = [m for m in manifests if m.get("dataset_id") in p_dataset_ids]
             except Exception:
                 pass
 
@@ -659,9 +657,8 @@ class ReportGenerator:
                 try:
                     from services.project_service import ProjectService
                     ps = ProjectService()
-                    proj = ps.get_project_by_id(project_id)
-                    if proj and proj.get("dataset_ids"):
-                        manifests = [m for m in manifests if m.get("dataset_id") in proj["dataset_ids"]]
+                    p_dataset_ids = set(ps.get_project_dataset_ids(project_id))
+                    manifests = [m for m in manifests if m.get("dataset_id") in p_dataset_ids]
                 except Exception:
                     pass
             dfs = []

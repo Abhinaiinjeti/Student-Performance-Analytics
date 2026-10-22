@@ -25,19 +25,27 @@ def index():
     from flask import session
     from services.project_service import ProjectService
 
+    ps = ProjectService()
     project_id = request.args.get("project_id") or session.get("active_project_id")
+    if not project_id:
+        active_p = ps.get_active_project()
+        if active_p:
+            project_id = active_p.get("project_id")
+
     if project_id and project_id != "ALL":
-        ps = ProjectService()
-        proj = ps.get_project_by_id(project_id)
-        if proj and proj.get("dataset_ids"):
-            manifests = [m for m in manifests if m.get("dataset_id") in proj["dataset_ids"]]
+        p_dataset_ids = set(ps.get_project_dataset_ids(project_id))
+        manifests = [m for m in manifests if m.get("dataset_id") in p_dataset_ids]
 
     selected_id = request.args.get("dataset_id")
-    if not selected_id:
-        selected_id = "ALL" if len(manifests) > 1 else (manifests[0]["dataset_id"] if manifests else None)
-
     assessment_type = request.args.get("assessment_type", "ALL")
-    analytics = service.get_dataset_analytics(selected_id, project_id=project_id, assessment_type=assessment_type)
+
+    if not manifests:
+        selected_id = None
+        analytics = None
+    else:
+        if not selected_id or (selected_id != "ALL" and selected_id not in [m["dataset_id"] for m in manifests]):
+            selected_id = "ALL" if len(manifests) > 1 else (manifests[0]["dataset_id"] if manifests else None)
+        analytics = service.get_dataset_analytics(selected_id, project_id=project_id, assessment_type=assessment_type)
 
     # Augment manifests with detected semester for dropdown display
     augmented_manifests = []

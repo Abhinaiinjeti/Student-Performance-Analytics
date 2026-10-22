@@ -208,15 +208,27 @@
         <div class="icon-box bg-light-subtle text-muted mx-auto mb-3" style="width: 64px; height: 64px;">
             <i data-lucide="filter" style="width: 32px; height: 32px;"></i>
         </div>
+        {% if active_project and active_project.id != 'ALL' and not manifests %}
+        <h5 class="fw-bold mb-2">No Datasets Uploaded for {{ active_project.name }}</h5>
+        <p class="text-muted small max-w-700 mx-auto mb-3">
+            This cohort does not have any academic spreadsheets uploaded yet. Launch the Import Wizard to add semester datasets.
+        </p>
+        <div>
+            <a href="{{ url_for('data.import_wizard') }}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1 shadow-sm">
+                <i data-lucide="upload-cloud"></i> Launch Import Wizard
+            </a>
+        </div>
+        {% else %}
         <h5 class="fw-bold mb-2">No Subject Records Found</h5>
         <p class="text-muted small max-w-700 mx-auto mb-3">
-            No course records matched the selected combination (Dataset: <strong>{{ selected_id }}</strong>, Department: <strong>{{ dept_filter }}</strong>, Semester: <strong>{{ sem_filter }}</strong>).
+            No course records matched the selected combination (Dataset: <strong>{{ selected_id or 'None' }}</strong>, Department: <strong>{{ dept_filter }}</strong>, Semester: <strong>{{ sem_filter }}</strong>).
         </p>
         <div>
             <a href="{{ url_for('academic_analysis.index', dataset_id='ALL', department='ALL', semester=0) }}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1 shadow-sm">
                 <i data-lucide="rotate-ccw"></i> View All Semesters Across Institution
             </a>
         </div>
+        {% endif %}
     </div>
     {% endif %}
 </div>

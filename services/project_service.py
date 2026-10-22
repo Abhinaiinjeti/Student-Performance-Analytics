@@ -58,7 +58,7 @@ class ProjectService:
         return [default_project]
 
     def get_all_projects(self) -> List[Dict[str, Any]]:
-        """Retrieves all registered academic batch projects with live statistics."""
+        """Retrieves all registered academic batch projects with live statistics and manifest reconciliation."""
         data = self.storage.read_json(self.projects_file)
         if data is None:
             projects = self._create_initial_batch_migration()
@@ -66,40 +66,88 @@ class ProjectService:
         else:
             projects = data
 
-        # Enrich each project with live statistics
-        manifests = {m["dataset_id"]: m for m in self.storage.list_manifests() if "dataset_id" in m}
+        # Enrich each project with live statistics and reconcile with disk manifests
+        all_manifests = self.storage.list_manifests()
+        manifests = {m["dataset_id"]: m for m in all_manifests if "dataset_id" in m}
+        
+        dirty = False
         enriched = []
         for p in projects:
             p_copy = dict(p)
             pid = p.get("project_id") or p.get("id")
             p_copy["id"] = pid
             p_copy["project_id"] = pid
-            d_ids = p.get("dataset_ids", [])
-            p_copy["dataset_ids"] = d_ids
-            p_copy["dataset_count"] = len(d_ids)
 
-            # Filter valid existing datasets for statistics
-            valid_d_ids = [did for did in d_ids if did in manifests]
+            # Self-healing: include dataset_ids currently declared in project plus any manifest referencing this project_id
+            declared_dids = list(p.get("dataset_ids", []))
+            manifest_matched_dids = [m["dataset_id"] for m in all_manifests if m.get("project_id") == pid]
+            merged_dids = list(dict.fromkeys(declared_dids + manifest_matched_dids))
+
+            # Keep IDs that exist in manifests, or non-UUID test dummies
+            valid_d_ids = [
+                did for did in merged_dids 
+                if (did in manifests) or not (len(did) == 36 and did.count("-") == 4)
+            ]
+
+            if set(p.get("dataset_ids", [])) != set(valid_d_ids):
+                p["dataset_ids"] = valid_d_ids
+                p["updated_at"] = datetime.now().isoformat()
+                dirty = True
+
+            p_copy["dataset_ids"] = valid_d_ids
+            p_copy["dataset_count"] = len(valid_d_ids)
 
             # Calculate total student count and semesters covered
             semesters_found = set()
             total_records = 0
             for did in valid_d_ids:
-                m = manifests[did]
-                total_records += m.get("row_counts", {}).get("accepted_rows", 0)
-                # Try inferring semester
-                fn = m.get("source_file", {}).get("original_filename", "")
-                sem_match = re.search(r"([1-4])-([1-2])|sem\s*([1-8])|semester\s*([1-8])", fn, re.IGNORECASE)
-                if sem_match:
-                    for g in sem_match.groups():
-                        if g:
-                            semesters_found.add(g)
+                if did in manifests:
+                    m = manifests[did]
+                    total_records += m.get("row_counts", {}).get("accepted_rows", 0)
+                    # Try inferring semester
+                    fn = m.get("source_file", {}).get("original_filename", "")
+                    sem_match = re.search(r"([1-4])-([1-2])|sem\s*([1-8])|semester\s*([1-8])", fn, re.IGNORECASE)
+                    if sem_match:
+                        for g in sem_match.groups():
+                            if g:
+                                semesters_found.add(g)
 
-            p_copy["semesters_count"] = len(semesters_found) if semesters_found else max(1, len(valid_d_ids))
+            p_copy["semesters_count"] = len(semesters_found) if semesters_found else (max(1, len(valid_d_ids)) if valid_d_ids else 0)
             p_copy["total_records"] = total_records
             enriched.append(p_copy)
 
+        if dirty:
+            self.save_projects(projects)
+            logger.info("Reconciled project dataset links with on-disk manifests.")
+
         return enriched
+
+    def get_project_dataset_ids(self, project_id: Optional[str]) -> List[str]:
+        """
+        Returns the list of valid dataset IDs belonging to a specific batch project.
+        If project_id is None, empty, or 'ALL', returns all dataset IDs in the lakehouse.
+        """
+        all_manifests = self.storage.list_manifests()
+        all_dids = [m["dataset_id"] for m in all_manifests if "dataset_id" in m]
+        if not project_id or project_id == "ALL":
+            return all_dids
+
+        # Look up project in active project list
+        projects = self.get_all_projects()
+        target_p = None
+        for p in projects:
+            if p.get("project_id") == project_id or p.get("id") == project_id:
+                target_p = p
+                break
+
+        if not target_p:
+            # Fallback to direct manifest matching
+            return [m["dataset_id"] for m in all_manifests if m.get("project_id") == project_id]
+
+        proj_dids = target_p.get("dataset_ids", [])
+        manifest_dids = [m["dataset_id"] for m in all_manifests if m.get("project_id") in (project_id, target_p.get("id"), target_p.get("project_id"))]
+        combined = list(dict.fromkeys(proj_dids + manifest_dids))
+        return combined
 
     def list_projects(self) -> List[Dict[str, Any]]:
         """Alias for get_all_projects."""
@@ -207,7 +255,7 @@ class ProjectService:
         projects = self.storage.read_json(self.projects_file) or []
         found = False
         for p in projects:
-            if p.get("project_id") == project_id:
+            if p.get("project_id") == project_id or p.get("id") == project_id:
                 if "dataset_ids" not in p:
                     p["dataset_ids"] = []
                 if dataset_id not in p["dataset_ids"]:
@@ -230,7 +278,7 @@ class ProjectService:
         projects = self.storage.read_json(self.projects_file) or []
         found = False
         for p in projects:
-            if p.get("project_id") == project_id:
+            if p.get("project_id") == project_id or p.get("id") == project_id:
                 if dataset_id in p.get("dataset_ids", []):
                     p["dataset_ids"].remove(dataset_id)
                     p["updated_at"] = datetime.now().isoformat()

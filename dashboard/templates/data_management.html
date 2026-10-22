@@ -123,7 +123,14 @@
                                 <i data-lucide="file-text" class="text-secondary"></i>
                                 <div>
                                     <strong class="d-block text-dark">{{ m.source_file.original_filename if (m.get('source_file') and m.source_file.original_filename) else m.dataset_id }}</strong>
-                                    <span class="extra-small font-monospace text-muted">{{ m.dataset_id }}</span>
+                                    <div class="d-flex align-items-center gap-2 mt-1">
+                                        <span class="extra-small font-monospace text-muted">{{ m.dataset_id }}</span>
+                                        {% if m.project_name %}
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle extra-small py-0 px-1 d-inline-flex align-items-center gap-1">
+                                            <i data-lucide="folder-git-2" style="width: 10px; height: 10px;"></i> {{ m.project_name }}
+                                        </span>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                         </td>

@@ -22,33 +22,48 @@ def index():
 
     manifests = storage.list_manifests()
 
+    ps = ProjectService()
     project_id = request.args.get("project_id") or session.get("active_project_id")
+    if not project_id:
+        active_p = ps.get_active_project()
+        if active_p:
+            project_id = active_p.get("project_id")
+
     if project_id and project_id != "ALL":
-        ps = ProjectService()
-        proj = ps.get_project_by_id(project_id)
-        if proj and proj.get("dataset_ids"):
-            manifests = [m for m in manifests if m.get("dataset_id") in proj["dataset_ids"]]
+        p_dataset_ids = set(ps.get_project_dataset_ids(project_id))
+        manifests = [m for m in manifests if m.get("dataset_id") in p_dataset_ids]
 
     req_dataset_id = request.args.get("dataset_id")
-    if not req_dataset_id:
-        selected_id = "ALL" if len(manifests) > 1 else (manifests[0]["dataset_id"] if manifests else None)
-    else:
-        selected_id = req_dataset_id
-
     dept_filter = request.args.get("department", "ALL")
     sem_filter = int(request.args.get("semester", 0))
     asmt_filter = request.args.get("assessment_type", "ALL")
 
-    analytics = service.get_filtered_analytics(
-        dataset_id=selected_id,
-        department=dept_filter,
-        semester=sem_filter,
-        project_id=project_id,
-        assessment_type=asmt_filter
-    )
+    if not manifests:
+        selected_id = None
+        analytics = None
+        effective_id = None
+        filter_options = {
+            "departments": [],
+            "semesters": [],
+            "all_semesters": [],
+            "all_departments": [],
+            "assessment_types": service.get_available_filter_options(None).get("assessment_types", [])
+        }
+    else:
+        if not req_dataset_id or (req_dataset_id != "ALL" and req_dataset_id not in [m["dataset_id"] for m in manifests]):
+            selected_id = "ALL" if len(manifests) > 1 else (manifests[0]["dataset_id"] if manifests else None)
+        else:
+            selected_id = req_dataset_id
 
-    effective_id = analytics.get("dataset_id", selected_id) if analytics else selected_id
-    filter_options = service.get_available_filter_options(selected_id, project_id=project_id)
+        analytics = service.get_filtered_analytics(
+            dataset_id=selected_id,
+            department=dept_filter,
+            semester=sem_filter,
+            project_id=project_id,
+            assessment_type=asmt_filter
+        )
+        effective_id = analytics.get("dataset_id", selected_id) if analytics else selected_id
+        filter_options = service.get_available_filter_options(selected_id, project_id=project_id)
 
     # Augment manifests with detected semester for dropdown display
     augmented_manifests = []

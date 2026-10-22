@@ -16,16 +16,26 @@ def get_service() -> AnalyticsService:
 @student_bp.route("/")
 def index():
     """Renders the individual student longitudinal performance trajectory."""
+    from flask import session
+    from services.project_service import ProjectService
+
     service = get_service()
+    ps = ProjectService()
+    project_id = request.args.get("project_id") or session.get("active_project_id")
+    if not project_id:
+        active_p = ps.get_active_project()
+        if active_p:
+            project_id = active_p.get("project_id")
+
     student_id = request.args.get("student_id", "").strip()
     student_record = None
 
     if student_id:
-        student_record = service.get_student_longitudinal_record(student_id)
+        student_record = service.get_student_longitudinal_record(student_id, project_id=project_id)
 
     # Fetch sample students and full ID list for datalist autocomplete
-    sample_students = service.get_sample_students(limit=10)
-    all_sample_entries = service.get_sample_students(limit=500)
+    sample_students = service.get_sample_students(limit=10, project_id=project_id)
+    all_sample_entries = service.get_sample_students(limit=500, project_id=project_id)
     all_student_ids = [s["student_id"] for s in all_sample_entries]
 
     return render_template(

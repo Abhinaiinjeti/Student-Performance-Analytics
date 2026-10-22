@@ -198,10 +198,17 @@
         <div class="icon-box bg-light-subtle text-muted mx-auto mb-3" style="width: 64px; height: 64px;">
             <i data-lucide="file-x" style="width: 32px; height: 32px;"></i>
         </div>
+        {% if active_project and active_project.id != 'ALL' and not manifests %}
+        <h4 class="fw-bold mb-2">No Reports Available for {{ active_project.name }}</h4>
+        <p class="text-muted max-w-700 mx-auto mb-4">
+            No datasets have been uploaded yet for this cohort batch. Ingest marksheet files to generate executive briefings and student ledgers.
+        </p>
+        {% else %}
         <h4 class="fw-bold mb-2">No Processed Datasets Found</h4>
         <p class="text-muted max-w-700 mx-auto mb-4">
             Ingest and process an academic marksheet file to generate executive briefings, student ledgers, and remedial lists.
         </p>
+        {% endif %}
         <div class="d-flex justify-content-center gap-2">
             <a href="{{ url_for('data.import_wizard') }}" class="btn btn-primary d-inline-flex align-items-center gap-2">
                 <i data-lucide="upload-cloud"></i> Ingest Dataset

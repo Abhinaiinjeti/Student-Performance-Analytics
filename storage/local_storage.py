@@ -255,6 +255,23 @@ class LocalStorage:
                     logger.warning(f"Could not remove report file {rep_file.name}: {e}")
 
             if deleted_any:
+                # Also unlink from batch projects in projects.json
+                try:
+                    projects_file = self.config.data_dir / "projects.json"
+                    if projects_file.exists():
+                        projects_data = self.read_json(projects_file)
+                        if projects_data and isinstance(projects_data, list):
+                            dirty = False
+                            for p in projects_data:
+                                if dataset_id in p.get("dataset_ids", []):
+                                    p["dataset_ids"].remove(dataset_id)
+                                    p["updated_at"] = datetime.now().isoformat()
+                                    dirty = True
+                            if dirty:
+                                self.atomic_write_json(projects_file, projects_data)
+                except Exception:
+                    pass
+
                 logger.info(f"Dataset {dataset_id} and all associated artifacts permanently removed.")
                 return True
         except Exception as e:
