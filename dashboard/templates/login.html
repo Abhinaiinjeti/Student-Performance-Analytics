@@ -35,30 +35,6 @@
                             {% endif %}
                         {% endwith %}
 
-                        <!-- Quick Role Demo Selector -->
-                        <div class="mb-4 p-3 rounded-3 bg-light-subtle border">
-                            <div class="d-flex align-items-center justify-content-between mb-2">
-                                <span class="extra-small text-uppercase fw-bold text-muted">
-                                    <i data-lucide="zap" style="width: 12px; height: 12px;" class="text-warning me-1"></i> Quick Demo Access:
-                                </span>
-                                <span class="extra-small text-muted">Click to auto-fill</span>
-                            </div>
-                            <div class="row g-2">
-                                <div class="col-6">
-                                    <button type="button" class="btn btn-outline-secondary btn-sm w-100 py-2 text-start" onclick="fillCredentials('faculty@edupulse.edu', 'Faculty@123', 'faculty')" title="Faculty Member - Upload & Class Marks">
-                                        <div class="fw-bold extra-small text-truncate">👨‍🏫 Faculty Member</div>
-                                        <div class="text-muted extra-small" style="font-size: 0.68rem;">Marksheet Upload & Entry</div>
-                                    </button>
-                                </div>
-                                <div class="col-6">
-                                    <button type="button" class="btn btn-outline-info btn-sm w-100 py-2 text-start" onclick="fillCredentials('student@edupulse.edu', 'Student@123', 'student')" title="Student - View Only Analytics">
-                                        <div class="fw-bold extra-small text-truncate">🎓 Student Portal</div>
-                                        <div class="text-muted extra-small" style="font-size: 0.68rem;">View Analytics & Results</div>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- Login Form -->
                         <form method="POST" action="{{ url_for('auth.login') }}" id="loginForm">
                             <input type="hidden" name="next" value="{{ next }}">
@@ -69,14 +45,13 @@
                                     <span class="input-group-text bg-white border-end-0 text-muted">
                                         <i data-lucide="user" style="width: 16px; height: 16px;"></i>
                                     </span>
-                                    <input type="text" class="form-control border-start-0 ps-0" id="identifier" name="identifier" value="{{ identifier or '' }}" placeholder="e.g. faculty@edupulse.edu or student" required autocomplete="username" autofocus>
+                                    <input type="text" class="form-control border-start-0 ps-0" id="identifier" name="identifier" value="{{ identifier or '' }}" placeholder="Enter your email or username" required autocomplete="username" autofocus>
                                 </div>
                             </div>
 
                             <div class="mb-3">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <label for="password" class="form-label small fw-semibold text-dark mb-0">Password</label>
-                                    <span class="extra-small text-muted" id="selectedRoleLabel"></span>
                                 </div>
                                 <div class="input-group">
                                     <span class="input-group-text bg-white border-end-0 text-muted">
@@ -113,18 +88,12 @@
                         </div>
                     </div>
 
-                    <!-- Role Permissions Footer Matrix -->
-                    <div class="bg-light-subtle px-4 py-3 border-top">
-                        <div class="row g-2 extra-small text-muted text-center">
-                            <div class="col-6 border-end">
-                                <span class="fw-bold d-block text-dark">Faculty Member</span>
-                                <span>Upload · Class Marks · Reports</span>
-                            </div>
-                            <div class="col-6">
-                                <span class="fw-bold d-block text-dark">Student Portal</span>
-                                <span>View Results & Longitudinal Profile</span>
-                            </div>
-                        </div>
+                    <!-- Institutional Security Notice -->
+                    <div class="bg-light-subtle px-4 py-3 border-top text-center">
+                        <span class="extra-small text-muted d-inline-flex align-items-center gap-1">
+                            <i data-lucide="shield-check" style="width: 13px; height: 13px;" class="text-success"></i>
+                            Authorized institutional access only · EduPulse Academic Intelligence
+                        </span>
                     </div>
                 </div>
             </div>
@@ -135,24 +104,6 @@
 
 {% block extra_js %}
 <script>
-function fillCredentials(id, pwd, roleName) {
-    document.getElementById('identifier').value = id;
-    document.getElementById('password').value = pwd;
-    const label = document.getElementById('selectedRoleLabel');
-    if (label) {
-        label.textContent = 'Selected: ' + roleName.toUpperCase();
-        label.className = 'extra-small text-primary fw-bold';
-    }
-    // Highlight submit button
-    const btn = document.getElementById('submitBtn');
-    btn.classList.add('btn-success');
-    btn.classList.remove('btn-primary');
-    setTimeout(() => {
-        btn.classList.remove('btn-success');
-        btn.classList.add('btn-primary');
-    }, 600);
-}
-
 function togglePasswordVisibility() {
     const pwdInput = document.getElementById('password');
     const icon = document.getElementById('passwordToggleIcon');
