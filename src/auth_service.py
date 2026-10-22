@@ -43,7 +43,7 @@ class AuthService:
                 "user_id": "usr_admin_01",
                 "username": "admin",
                 "email": "admin@edupulse.edu",
-                "name": "Prof. Rajesh Sharma (HOD)",
+                "name": "Department Administrator",
                 "password_hash": generate_password_hash("Admin@123"),
                 "role": "admin",
                 "department": "Computer Science & Engineering",
@@ -54,7 +54,7 @@ class AuthService:
                 "user_id": "usr_faculty_01",
                 "username": "faculty",
                 "email": "faculty@edupulse.edu",
-                "name": "Dr. K. Ananya (Associate Prof.)",
+                "name": "Faculty Member",
                 "password_hash": generate_password_hash("Faculty@123"),
                 "role": "faculty",
                 "department": "Computer Science & Engineering",
@@ -173,7 +173,7 @@ def get_current_user() -> Optional[Dict[str, Any]]:
             "user_id": "usr_test_admin",
             "username": "admin",
             "email": "admin@edupulse.edu",
-            "name": "Prof. Rajesh Sharma (HOD)",
+            "name": "Department Administrator",
             "role": "admin",
             "department": "Computer Science & Engineering"
         }
