@@ -169,6 +169,15 @@
                         </td>
                         <td class="text-end pe-4">
                             <div class="d-inline-flex align-items-center gap-2">
+                                {% if m.get('cloud_sync') and m.cloud_sync.status == 'synced' %}
+                                <button class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-1 shadow-sm" onclick="openCloudSyncModal('{{ m.dataset_id }}', '{{ m.source_file.original_filename if (m.get('source_file') and m.source_file.original_filename) else m.dataset_id }}')" title="Synced to {{ m.cloud_sync.s3_uri or m.cloud_sync.bucket }}">
+                                    <i data-lucide="cloud"></i> <span class="d-none d-md-inline">S3 Synced</span>
+                                </button>
+                                {% else %}
+                                <button class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 shadow-sm" onclick="openCloudSyncModal('{{ m.dataset_id }}', '{{ m.source_file.original_filename if (m.get('source_file') and m.source_file.original_filename) else m.dataset_id }}')" title="Archive to AWS S3">
+                                    <i data-lucide="cloud"></i> <span class="d-none d-md-inline">Sync S3</span>
+                                </button>
+                                {% endif %}
                                 <button class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" onclick="viewManifest('{{ m.dataset_id }}')">
                                     <i data-lucide="eye"></i> Manifest
                                 </button>
@@ -287,11 +296,38 @@
         </div>
     </div>
 </div>
+
+<!-- Cloud Archive Confirmation Modal (AWS S3) -->
+<div class="modal fade" id="cloudSyncModal" tabindex="-1" aria-labelledby="cloudSyncModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0 d-flex justify-content-between align-items-start">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="icon-box bg-warning-subtle text-warning" style="width: 44px; height: 44px;">
+                        <i data-lucide="cloud"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold mb-0" id="cloudSyncModalLabel">Cloud Archive Confirmation (AWS S3)</h5>
+                        <p class="text-muted extra-small mb-0">Pre-flight cryptographic authorization & cost verification</p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-4" id="cloudSyncModalBody">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary mb-2" role="status"></div>
+                    <p class="text-muted small mb-0">Calculating dataset payload breakdown, partitions, and AWS cost estimate...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 let datasetToDelete = null;
+let activeSyncModal = null;
 
 function viewManifest(datasetId) {
     const modal = new bootstrap.Modal(document.getElementById('manifestModal'));
@@ -372,5 +408,239 @@ function executeDeleteAllDatasets() {
         btn.innerHTML = '<i data-lucide="trash-2"></i> Permanently Delete All';
     });
 }
+
+// AWS S3 Cloud Sync Modal Workflow
+function openCloudSyncModal(datasetId, datasetName) {
+    const modalElem = document.getElementById('cloudSyncModal');
+    const modalBody = document.getElementById('cloudSyncModalBody');
+    activeSyncModal = new bootstrap.Modal(modalElem);
+    
+    modalBody.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary mb-2" role="status"></div>
+            <p class="text-muted small mb-0">Calculating dataset payload breakdown and AWS cost estimate for <strong>${datasetName}</strong>...</p>
+        </div>
+    `;
+    activeSyncModal.show();
+
+    fetch(`/data-management/api/sync/estimate/${datasetId}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) {
+                modalBody.innerHTML = `
+                    <div class="alert alert-danger mb-0">
+                        <i data-lucide="alert-circle" class="me-1"></i> ${data.error}
+                    </div>
+                `;
+                if (window.lucide) lucide.createIcons();
+                return;
+            }
+
+            const est = data.estimate;
+
+            // Check if AWS is completely disabled
+            if (!est.aws_enabled && !est.simulation_mode) {
+                modalBody.innerHTML = `
+                    <div class="text-center py-3">
+                        <div class="icon-box bg-secondary-subtle text-secondary mx-auto mb-3" style="width: 56px; height: 56px;">
+                            <i data-lucide="shield-check" style="width: 28px; height: 28px;"></i>
+                        </div>
+                        <h5 class="fw-bold mb-2">Cloud Archival Disabled by Policy</h5>
+                        <p class="text-muted small max-w-500 mx-auto mb-3">
+                            EduPulse Analytics operates in local-first mode. Cloud synchronization to Amazon Web Services is currently inactive.
+                        </p>
+                        <div class="p-3 bg-light rounded text-start extra-small text-muted mb-4 border">
+                            <i data-lucide="info" class="text-primary me-1"></i>
+                            To test cloud archiving with zero charges, you can enable <strong>Simulation Mode</strong> or configure your institutional S3 bucket in System Settings.
+                        </div>
+                        <div class="d-flex justify-content-center gap-2">
+                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                            <a href="/settings" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1">
+                                <i data-lucide="settings"></i> Open System Settings
+                            </a>
+                        </div>
+                    </div>
+                `;
+                if (window.lucide) lucide.createIcons();
+                return;
+            }
+
+            const modeBadge = est.simulation_mode
+                ? '<span class="badge bg-info-subtle text-info border"><i data-lucide="sparkles" class="badge-icon me-1"></i> Simulation Mode (Zero Charges)</span>'
+                : '<span class="badge bg-warning-subtle text-warning border"><i data-lucide="cloud" class="badge-icon me-1"></i> Live AWS S3 Archive</span>';
+
+            modalBody.innerHTML = `
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <span class="text-muted small">Pre-Flight Cloud Authorization</span>
+                    ${modeBadge}
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-sm-6">
+                        <div class="p-3 bg-light rounded border h-100">
+                            <span class="extra-small text-uppercase text-muted fw-semibold d-block mb-1">Target Dataset</span>
+                            <strong class="d-block text-truncate" title="${est.dataset_name}">${est.dataset_name}</strong>
+                            <span class="extra-small text-muted font-monospace">${est.record_count.toLocaleString()} validated records</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="p-3 bg-light rounded border h-100">
+                            <span class="extra-small text-uppercase text-muted fw-semibold d-block mb-1">Transfer Payload</span>
+                            <strong class="d-block">${est.total_kb} KB (${est.total_mb} MB)</strong>
+                            <span class="extra-small text-muted">${est.file_count} object(s) (CSV, Manifest, Parquet)</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="p-3 bg-light rounded border h-100">
+                            <span class="extra-small text-uppercase text-muted fw-semibold d-block mb-1">Destination Bucket</span>
+                            <span class="d-block font-monospace small text-primary text-truncate">s3://${est.target_bucket}/${est.target_prefix}</span>
+                            <span class="extra-small text-muted">Region: ${est.target_region}</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="p-3 bg-light rounded border h-100">
+                            <span class="extra-small text-uppercase text-muted fw-semibold d-block mb-1">Est. Monthly S3 Cost</span>
+                            <strong class="d-block text-success">~$${est.estimated_monthly_cost_usd} / mo</strong>
+                            <span class="extra-small text-muted">Based on S3 Standard ($0.023/GB)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-light-subtle rounded border border-light-subtle mb-3">
+                    <span class="extra-small fw-bold text-uppercase text-muted d-block mb-2">Privacy & Compliance Guardrails</span>
+                    <ul class="extra-small text-muted ps-3 mb-0">
+                        <li><strong>FERPA & DPDP:</strong> Real student names excluded; student identifiers are pseudonymized.</li>
+                        <li><strong>Server-Side Encryption:</strong> AES-256 Server-Side Encryption (SSE) enforced on every object.</li>
+                        <li><strong>Secure Transport:</strong> Strict TLS 1.3 / HTTPS encrypted connection.</li>
+                    </ul>
+                </div>
+
+                <div class="p-3 bg-warning-subtle rounded border border-warning-subtle mb-3">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="extra-small fw-bold text-uppercase text-warning-emphasis">One-Time Confirmation Token</span>
+                        <span class="badge bg-warning text-dark font-monospace fs-6 px-3 py-1 shadow-sm">${est.confirmation_token}</span>
+                    </div>
+                    <p class="extra-small text-muted mb-2">
+                        To authorize this cloud transmission, type the 6-character token above:
+                    </p>
+                    <input type="text" id="syncTokenInput" class="form-control text-center text-uppercase fw-bold font-monospace fs-5" maxlength="6" placeholder="ENTER TOKEN">
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 pt-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel / Abort</button>
+                    <button type="button" id="btnConfirmSync" class="btn btn-primary btn-sm px-3 shadow-sm d-inline-flex align-items-center gap-2" disabled onclick="executeCloudSync('${est.dataset_id}', '${est.confirmation_token}')">
+                        <i data-lucide="cloud-upload"></i> Confirm & Sync to S3
+                    </button>
+                </div>
+            `;
+            if (window.lucide) lucide.createIcons();
+
+            // Enable submit button once exact token matches
+            const tokenInput = document.getElementById('syncTokenInput');
+            const submitBtn = document.getElementById('btnConfirmSync');
+            tokenInput.addEventListener('input', function() {
+                if (this.value.trim().toUpperCase() === est.confirmation_token) {
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove('btn-primary');
+                    submitBtn.classList.add('btn-success');
+                } else {
+                    submitBtn.disabled = true;
+                    submitBtn.classList.remove('btn-success');
+                    submitBtn.classList.add('btn-primary');
+                }
+            });
+        })
+        .catch(err => {
+            modalBody.innerHTML = `
+                <div class="alert alert-danger mb-0">
+                    Failed to calculate cloud sync estimate: ${err}
+                </div>
+            `;
+        });
+}
+
+function executeCloudSync(datasetId, validToken) {
+    const modalBody = document.getElementById('cloudSyncModalBody');
+    const tokenInput = document.getElementById('syncTokenInput');
+    const providedToken = tokenInput.value.trim().toUpperCase();
+
+    modalBody.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status"></div>
+            <h5 class="fw-bold mb-1">Encrypting & Synchronizing to S3...</h5>
+            <p class="text-muted small mb-3">Uploading cryptographic manifest, clean marksheet, and Parquet partitions with AES-256 SSE...</p>
+            <div class="progress" style="height: 6px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary w-100"></div>
+            </div>
+        </div>
+    `;
+
+    fetch('/data-management/api/sync/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            dataset_id: datasetId,
+            provided_token: providedToken,
+            valid_token: validToken
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            const res = data.result;
+            modalBody.innerHTML = `
+                <div class="text-center py-3">
+                    <div class="icon-box bg-success-subtle text-success mx-auto mb-3" style="width: 60px; height: 60px;">
+                        <i data-lucide="check-circle" style="width: 32px; height: 32px;"></i>
+                    </div>
+                    <h5 class="fw-bold mb-1">Archived Successfully to AWS S3!</h5>
+                    <p class="text-muted small mb-3">
+                        Mode: <strong>${res.mode === 'simulation' ? 'Simulation (Zero Cost)' : 'Live AWS S3'}</strong> &bull; Total transferred: <strong>${res.total_mb} MB</strong> (${res.total_files} objects)
+                    </p>
+
+                    <div class="p-3 bg-light rounded text-start small mb-4 border font-monospace">
+                        <div class="text-muted extra-small mb-1">Primary Cloud S3 URI:</div>
+                        <div class="text-primary fw-bold text-truncate mb-2">${res.s3_uri}</div>
+                        <div class="text-muted extra-small mb-1">Synchronized Objects:</div>
+                        <ul class="extra-small ps-3 mb-0 text-muted">
+                            ${res.uploaded_objects.map(obj => `<li>${obj}</li>`).join('')}
+                        </ul>
+                    </div>
+
+                    <button type="button" class="btn btn-primary btn-sm px-4 shadow-sm" onclick="window.location.reload()">
+                        Done & Refresh Catalog
+                    </button>
+                </div>
+            `;
+            if (window.lucide) lucide.createIcons();
+        } else {
+            modalBody.innerHTML = `
+                <div class="text-center py-3">
+                    <div class="icon-box bg-danger-subtle text-danger mx-auto mb-3" style="width: 56px; height: 56px;">
+                        <i data-lucide="alert-octagon" style="width: 28px; height: 28px;"></i>
+                    </div>
+                    <h5 class="fw-bold text-danger mb-2">Cloud Synchronization Failed</h5>
+                    <p class="text-muted small mb-4">${data.error || 'Unknown error occurred during cloud transfer.'}</p>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            `;
+            if (window.lucide) lucide.createIcons();
+        }
+    })
+    .catch(err => {
+        modalBody.innerHTML = `
+            <div class="text-center py-3">
+                <div class="icon-box bg-danger-subtle text-danger mx-auto mb-3" style="width: 56px; height: 56px;">
+                    <i data-lucide="alert-octagon" style="width: 28px; height: 28px;"></i>
+                </div>
+                <h5 class="fw-bold text-danger mb-2">Network Error</h5>
+                <p class="text-muted small mb-4">Request failed: ${err}</p>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+    });
+}
 </script>
 {% endblock %}
+

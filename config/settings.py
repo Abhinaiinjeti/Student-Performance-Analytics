@@ -6,6 +6,7 @@ import re
 import logging
 from pathlib import Path
 from dataclasses import dataclass, field
+from typing import Optional, Dict, Any, List
 from dotenv import load_dotenv
 
 # Base Project Root
@@ -114,22 +115,24 @@ class StorageConfig:
 @dataclass
 class SparkConfig:
     """PySpark standalone execution parameters."""
-    app_name: str = os.getenv("SPARK_APP_NAME", "EduPulseAnalytics")
-    master: str = os.getenv("SPARK_MASTER", "local[*]")
-    driver_memory: str = os.getenv("SPARK_DRIVER_MEMORY", "4g")
-    executor_memory: str = os.getenv("SPARK_EXECUTOR_MEMORY", "2g")
-    shuffle_partitions: int = int(os.getenv("SPARK_SHUFFLE_PARTITIONS", "8"))
+    app_name: str = field(default_factory=lambda: os.getenv("SPARK_APP_NAME", "EduPulseAnalytics"))
+    master: str = field(default_factory=lambda: os.getenv("SPARK_MASTER", "local[*]"))
+    driver_memory: str = field(default_factory=lambda: os.getenv("SPARK_DRIVER_MEMORY", "4g"))
+    executor_memory: str = field(default_factory=lambda: os.getenv("SPARK_EXECUTOR_MEMORY", "2g"))
+    shuffle_partitions: int = field(default_factory=lambda: int(os.getenv("SPARK_SHUFFLE_PARTITIONS", "8")))
 
 
 @dataclass
 class AWSConfig:
     """Optional Amazon S3 Cloud Storage configuration (Disabled by default)."""
-    enabled: bool = os.getenv("AWS_ENABLED", "false").lower() in ("true", "1", "yes")
-    region: str = os.getenv("AWS_REGION", "us-east-1")
-    bucket_name: str = os.getenv("AWS_S3_BUCKET", "")
-    prefix: str = os.getenv("AWS_S3_PREFIX", "archives/")
-    access_key_id: str = os.getenv("AWS_ACCESS_KEY_ID", "")
-    secret_access_key: str = os.getenv("AWS_SECRET_ACCESS_KEY", "")
+    enabled: bool = field(default_factory=lambda: os.getenv("AWS_ENABLED", "false").lower() in ("true", "1", "yes"))
+    simulation_mode: bool = field(default_factory=lambda: os.getenv("AWS_SIMULATION_MODE", "false").lower() in ("true", "1", "yes"))
+    region: str = field(default_factory=lambda: os.getenv("AWS_REGION", "us-east-1"))
+    bucket_name: str = field(default_factory=lambda: os.getenv("AWS_S3_BUCKET", ""))
+    prefix: str = field(default_factory=lambda: os.getenv("AWS_S3_PREFIX", "archives/"))
+    access_key_id: str = field(default_factory=lambda: os.getenv("AWS_ACCESS_KEY_ID", ""))
+    secret_access_key: str = field(default_factory=lambda: os.getenv("AWS_SECRET_ACCESS_KEY", ""))
+
 
 
 @dataclass
@@ -172,8 +175,49 @@ class AppConfig:
         logging.getLogger("werkzeug").setLevel(logging.WARNING)
 
 
-def get_config() -> AppConfig:
+_GLOBAL_CONFIG: Optional[AppConfig] = None
+
+
+def get_config(reload: bool = False) -> AppConfig:
     """Factory function returning the initialized configuration."""
-    cfg = AppConfig()
-    cfg.storage.ensure_directories()
-    return cfg
+    global _GLOBAL_CONFIG
+    if _GLOBAL_CONFIG is None or reload:
+        _GLOBAL_CONFIG = AppConfig()
+        _GLOBAL_CONFIG.storage.ensure_directories()
+    return _GLOBAL_CONFIG
+
+
+def save_env_config(updates: dict) -> None:
+    """
+    Updates or creates variables in .env without losing existing keys.
+    Also syncs with os.environ.
+    """
+    env_path = PROJECT_ROOT / ".env"
+    existing_lines = []
+    existing_keys = set()
+
+    if env_path.exists():
+        with open(env_path, "r", encoding="utf-8") as f:
+            existing_lines = f.readlines()
+
+    new_lines = []
+    for line in existing_lines:
+        trimmed = line.strip()
+        if trimmed and not trimmed.startswith("#") and "=" in trimmed:
+            k = trimmed.split("=", 1)[0].strip()
+            if k in updates:
+                new_lines.append(f"{k}={updates[k]}\n")
+                existing_keys.add(k)
+                continue
+        new_lines.append(line)
+
+    for k, v in updates.items():
+        if k not in existing_keys:
+            new_lines.append(f"{k}={v}\n")
+
+    with open(env_path, "w", encoding="utf-8") as f:
+        f.writelines(new_lines)
+
+    for k, v in updates.items():
+        os.environ[k] = str(v)
+

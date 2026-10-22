@@ -229,3 +229,50 @@ def remove_all_datasets():
         logger.error(f"Error purging all datasets: {e}")
         return jsonify({"error": f"Failed to remove all datasets: {str(e)}"}), 500
 
+
+@data_bp.route("/api/sync/estimate/<dataset_id>", methods=["GET"])
+def get_sync_estimate(dataset_id: str):
+    """API endpoint: Pre-flight payload calculation, cost breakdown, and single-use confirmation token."""
+    from storage.s3_storage import S3StorageAdapter
+
+    try:
+        adapter = S3StorageAdapter()
+        estimate = adapter.calculate_sync_estimate(dataset_id)
+        return jsonify({"status": "success", "estimate": estimate})
+    except FileNotFoundError:
+        return jsonify({"error": f"Dataset {dataset_id} not found."}), 404
+    except Exception as e:
+        logger.error(f"Error calculating sync estimate for {dataset_id}: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@data_bp.route("/api/sync/execute", methods=["POST"])
+def execute_cloud_sync():
+    """API endpoint: Validates token and executes (live or simulated) S3 synchronization."""
+    from storage.s3_storage import S3StorageAdapter
+
+    data = request.get_json() or {}
+    dataset_id = data.get("dataset_id")
+    provided_token = data.get("provided_token")
+    valid_token = data.get("valid_token")
+
+    if not dataset_id or not provided_token or not valid_token:
+        return jsonify({"error": "Missing required sync parameters or authorization token."}), 400
+
+    try:
+        adapter = S3StorageAdapter()
+        result = adapter.sync_dataset_to_s3(
+            dataset_id=dataset_id,
+            provided_token=provided_token,
+            valid_token=valid_token
+        )
+        return jsonify({"status": "success", "result": result})
+    except PermissionError as pe:
+        return jsonify({"error": str(pe)}), 403
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
+    except Exception as e:
+        logger.error(f"Error executing S3 sync for {dataset_id}: {e}")
+        return jsonify({"error": f"Cloud synchronization failed: {str(e)}"}), 500
+
+

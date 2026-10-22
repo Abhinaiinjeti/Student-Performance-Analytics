@@ -194,31 +194,100 @@
                             <small class="text-muted">Optional remote object storage archive</small>
                         </div>
                     </div>
-                    <span class="badge bg-secondary-subtle text-secondary border">
-                        <i data-lucide="shield-check" class="badge-icon me-1"></i> Disabled (Local First)
+                    <span id="awsStatusBadge">
+                        {% if aws_stats.enabled and aws_stats.simulation_mode %}
+                        <span class="badge bg-info-subtle text-info border">
+                            <i data-lucide="sparkles" class="badge-icon me-1"></i> Simulation Active
+                        </span>
+                        {% elif aws_stats.enabled %}
+                        <span class="badge bg-success-subtle text-success border">
+                            <i data-lucide="check-circle" class="badge-icon me-1"></i> AWS Enabled
+                        </span>
+                        {% else %}
+                        <span class="badge bg-secondary-subtle text-secondary border">
+                            <i data-lucide="shield-check" class="badge-icon me-1"></i> Disabled (Local First)
+                        </span>
+                        {% endif %}
                     </span>
                 </div>
 
                 <div class="p-3 bg-light rounded mb-3 small text-muted">
-                    <div class="d-flex align-items-center gap-2 mb-2">
+                    <div class="d-flex align-items-center gap-2 mb-1">
                         <i data-lucide="info" class="text-primary"></i>
                         <strong class="text-dark">Zero-Cloud Footprint Guarantee</strong>
                     </div>
-                    <p class="extra-small mb-2">
-                        EduPulse Analytics runs 100% offline out-of-the-box. No AWS credentials, S3 buckets, or remote servers are contacted without explicit administrator approval.
+                    <p class="extra-small mb-0">
+                        EduPulse Analytics runs 100% offline out-of-the-box. Enable S3 archiving below for institutional backups, or use <strong>Simulation Mode</strong> to test cloud workflows with zero AWS charges.
                     </p>
-                    <ul class="extra-small ps-3 mb-0">
-                        <li>Configured Bucket: <code>{{ aws_stats.bucket }}</code></li>
-                        <li>Configured Region: <code>{{ aws_stats.region }}</code></li>
-                        <li>Client Status: <code>Offline / Local Only</code></li>
-                    </ul>
                 </div>
 
-                <div class="mt-auto">
-                    <button class="btn btn-outline-secondary btn-sm w-100" disabled>
-                        <i data-lucide="lock" class="me-1"></i> Cloud Sync Disabled by Policy
-                    </button>
-                </div>
+                <form id="awsConfigForm">
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <div class="form-check form-switch pt-1">
+                                <input class="form-check-input" type="checkbox" id="awsEnabled" {% if aws_stats.enabled %}checked{% endif %}>
+                                <label class="form-check-label extra-small fw-semibold" for="awsEnabled">Enable AWS Sync</label>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-check form-switch pt-1">
+                                <input class="form-check-input" type="checkbox" id="awsSimulation" {% if aws_stats.simulation_mode %}checked{% endif %}>
+                                <label class="form-check-label extra-small fw-semibold text-info" for="awsSimulation">
+                                    Simulation Mode
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-7">
+                            <label class="form-label extra-small fw-semibold text-uppercase text-muted mb-1">S3 Bucket Name</label>
+                            <input type="text" class="form-control form-control-sm font-monospace" id="awsBucket" value="{{ aws_stats.bucket }}" placeholder="edupulse-analytics-lakehouse">
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label extra-small fw-semibold text-uppercase text-muted mb-1">AWS Region</label>
+                            <select class="form-select form-select-sm" id="awsRegion">
+                                <option value="us-east-1" {% if aws_stats.region == 'us-east-1' %}selected{% endif %}>us-east-1 (N. Virginia)</option>
+                                <option value="us-east-2" {% if aws_stats.region == 'us-east-2' %}selected{% endif %}>us-east-2 (Ohio)</option>
+                                <option value="us-west-2" {% if aws_stats.region == 'us-west-2' %}selected{% endif %}>us-west-2 (Oregon)</option>
+                                <option value="ap-south-1" {% if aws_stats.region == 'ap-south-1' %}selected{% endif %}>ap-south-1 (Mumbai)</option>
+                                <option value="ap-southeast-1" {% if aws_stats.region == 'ap-southeast-1' %}selected{% endif %}>ap-southeast-1 (Singapore)</option>
+                                <option value="eu-west-1" {% if aws_stats.region == 'eu-west-1' %}selected{% endif %}>eu-west-1 (Ireland)</option>
+                                <option value="eu-central-1" {% if aws_stats.region == 'eu-central-1' %}selected{% endif %}>eu-central-1 (Frankfurt)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-2">
+                        <div class="col-12">
+                            <label class="form-label extra-small fw-semibold text-uppercase text-muted mb-1">S3 Key Prefix</label>
+                            <input type="text" class="form-control form-control-sm font-monospace" id="awsPrefix" value="{{ aws_stats.prefix }}" placeholder="archives/">
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label extra-small fw-semibold text-uppercase text-muted mb-1">Access Key ID</label>
+                            <input type="text" class="form-control form-control-sm font-monospace" id="awsAccessKey" value="{{ aws_stats.access_key_id }}" placeholder="AKIA..." autocomplete="off">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label extra-small fw-semibold text-uppercase text-muted mb-1">Secret Access Key</label>
+                            <input type="password" class="form-control form-control-sm font-monospace" id="awsSecretKey" placeholder="{% if aws_stats.has_secret %}•••••••• (Saved){% else %}Enter secret key{% endif %}" autocomplete="new-password">
+                        </div>
+                    </div>
+
+                    <!-- Connection test diagnostic alert -->
+                    <div id="awsConnectionAlert" class="alert d-none extra-small mb-3 py-2 px-3" role="alert"></div>
+
+                    <div class="d-flex align-items-center gap-2 mt-auto">
+                        <button type="submit" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2">
+                            <i data-lucide="save"></i> Save Configuration
+                        </button>
+                        <button type="button" id="btnTestAws" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2">
+                            <i data-lucide="activity"></i> Test Connection
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -263,6 +332,106 @@ document.getElementById('marksRulesForm').addEventListener('submit', async funct
     }
     
     setTimeout(() => alertBox.classList.add('d-none'), 4000);
+});
+
+// AWS Settings Save Handler
+document.getElementById('awsConfigForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const alertBox = document.getElementById('settingsAlert');
+    const badgeContainer = document.getElementById('awsStatusBadge');
+
+    const payload = {
+        enabled: document.getElementById('awsEnabled').checked,
+        simulation_mode: document.getElementById('awsSimulation').checked,
+        bucket_name: document.getElementById('awsBucket').value.trim(),
+        region: document.getElementById('awsRegion').value,
+        prefix: document.getElementById('awsPrefix').value.trim() || 'archives/',
+        access_key_id: document.getElementById('awsAccessKey').value.trim(),
+        secret_access_key: document.getElementById('awsSecretKey').value.trim()
+    };
+
+    try {
+        const res = await fetch('/settings/api/aws', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (data.status === 'success') {
+            alertBox.className = 'alert alert-success mb-4';
+            alertBox.textContent = 'AWS Cloud Archiving configuration saved successfully.';
+            alertBox.classList.remove('d-none');
+
+            // Update badge dynamically
+            if (payload.enabled && payload.simulation_mode) {
+                badgeContainer.innerHTML = '<span class="badge bg-info-subtle text-info border"><i data-lucide="sparkles" class="badge-icon me-1"></i> Simulation Active</span>';
+            } else if (payload.enabled) {
+                badgeContainer.innerHTML = '<span class="badge bg-success-subtle text-success border"><i data-lucide="check-circle" class="badge-icon me-1"></i> AWS Enabled</span>';
+            } else {
+                badgeContainer.innerHTML = '<span class="badge bg-secondary-subtle text-secondary border"><i data-lucide="shield-check" class="badge-icon me-1"></i> Local First (Disabled)</span>';
+            }
+            if (window.lucide) lucide.createIcons();
+        } else {
+            alertBox.className = 'alert alert-danger mb-4';
+            alertBox.textContent = data.message || 'Failed to save AWS settings.';
+            alertBox.classList.remove('d-none');
+        }
+    } catch (err) {
+        alertBox.className = 'alert alert-danger mb-4';
+        alertBox.textContent = 'Network error while saving AWS config: ' + err.message;
+        alertBox.classList.remove('d-none');
+    }
+
+    setTimeout(() => alertBox.classList.add('d-none'), 4000);
+});
+
+// AWS Connection Test Handler
+document.getElementById('btnTestAws').addEventListener('click', async function() {
+    const btn = this;
+    const testAlert = document.getElementById('awsConnectionAlert');
+    const origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Testing...';
+
+    const payload = {
+        enabled: document.getElementById('awsEnabled').checked,
+        simulation_mode: document.getElementById('awsSimulation').checked,
+        bucket_name: document.getElementById('awsBucket').value.trim(),
+        region: document.getElementById('awsRegion').value,
+        prefix: document.getElementById('awsPrefix').value.trim() || 'archives/',
+        access_key_id: document.getElementById('awsAccessKey').value.trim(),
+        secret_access_key: document.getElementById('awsSecretKey').value.trim()
+    };
+
+    try {
+        const res = await fetch('/settings/api/aws/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (data.status === 'success') {
+            testAlert.className = 'alert alert-success extra-small mb-3 py-2 px-3';
+            testAlert.innerHTML = `<strong><i data-lucide="check-circle" class="me-1"></i> Success:</strong> ${data.message}`;
+            testAlert.classList.remove('d-none');
+        } else {
+            testAlert.className = 'alert alert-warning extra-small mb-3 py-2 px-3';
+            testAlert.innerHTML = `<strong><i data-lucide="alert-triangle" class="me-1"></i> Notice:</strong> ${data.message}`;
+            testAlert.classList.remove('d-none');
+        }
+        if (window.lucide) lucide.createIcons();
+    } catch (err) {
+        testAlert.className = 'alert alert-danger extra-small mb-3 py-2 px-3';
+        testAlert.innerHTML = `<strong><i data-lucide="x-circle" class="me-1"></i> Error:</strong> Connection test failed: ${err.message}`;
+        testAlert.classList.remove('d-none');
+        if (window.lucide) lucide.createIcons();
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+        if (window.lucide) lucide.createIcons();
+    }
 });
 </script>
 {% endblock %}
