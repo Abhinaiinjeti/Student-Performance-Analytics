@@ -1,0 +1,376 @@
+{% extends "base.html" %}
+
+{% block title %}Dataset Library — EduPulse Analytics{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+    <!-- Header Breadcrumb & Actions -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="{{ url_for('core.landing') }}">Home</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Data Management</li>
+                </ol>
+            </nav>
+            <h2 class="h3 fw-bold mb-0">Dataset Library & Ingestion Catalog</h2>
+            <p class="text-muted small mb-0">
+                Manage registered academic datasets, inspect cryptographic manifests, and launch the guided import wizard.
+            </p>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-outline-secondary d-flex align-items-center gap-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#manageProjectsModal">
+                <i data-lucide="folder-cog"></i> Manage Batches
+            </button>
+            <a href="{{ url_for('data.import_wizard') }}" class="btn btn-primary d-flex align-items-center gap-2 shadow-sm">
+                <i data-lucide="upload-cloud"></i> Import Spreadsheet
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm p-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="icon-box bg-primary-subtle text-primary">
+                        <i data-lucide="database"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted extra-small text-uppercase fw-semibold">Total Datasets</span>
+                        <h4 class="mb-0 fw-bold">{{ total_datasets }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm p-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="icon-box bg-success-subtle text-success">
+                        <i data-lucide="shield-check"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted extra-small text-uppercase fw-semibold">Audit Integrity</span>
+                        <h4 class="mb-0 fw-bold">100% SHA-256</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm p-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="icon-box bg-purple-subtle text-purple">
+                        <i data-lucide="layers"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted extra-small text-uppercase fw-semibold">Storage Formats</span>
+                        <h4 class="mb-0 fw-bold">Raw & Validated</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm p-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="icon-box bg-warning-subtle text-warning">
+                        <i data-lucide="lock"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted extra-small text-uppercase fw-semibold">Privacy Status</span>
+                        <h4 class="mb-0 fw-bold">Local-First</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Datasets Table / Empty State -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3 border-light-subtle d-flex align-items-center justify-content-between">
+            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                <i data-lucide="file-spreadsheet" class="text-primary"></i> Registered Academic Datasets
+            </h5>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-light text-muted border">{{ manifests|length }} Items</span>
+                {% if manifests %}
+                <button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 shadow-sm" onclick="confirmDeleteAllDatasets()" title="Purge all datasets">
+                    <i data-lucide="trash-2"></i> Delete All
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if manifests %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Dataset ID / Name</th>
+                        <th>Model Type</th>
+                        <th>Accepted Rows</th>
+                        <th>Validation Tally</th>
+                        <th>SHA-256 Checksum</th>
+                        <th>Imported At</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in manifests %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center gap-2">
+                                <i data-lucide="file-text" class="text-secondary"></i>
+                                <div>
+                                    <strong class="d-block text-dark">{{ m.source_file.original_filename if (m.get('source_file') and m.source_file.original_filename) else m.dataset_id }}</strong>
+                                    <span class="extra-small font-monospace text-muted">{{ m.dataset_id }}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if m.model_type == 'marks_based' %}
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                <i data-lucide="award" class="badge-icon me-1"></i> Marks-Based
+                            </span>
+                            {% else %}
+                            <span class="badge bg-purple-subtle text-purple border border-purple-subtle">
+                                <i data-lucide="graduation-cap" class="badge-icon me-1"></i> Grade-Based
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong class="text-success">{{ "{:,}".format(m.row_counts.accepted_rows) if m.get('row_counts') else 'N/A' }}</strong>
+                            <small class="text-muted">/ {{ "{:,}".format(m.row_counts.total_raw_rows) if m.get('row_counts') else 'N/A' }}</small>
+                        </td>
+                        <td>
+                            {% if m.get('row_counts') %}
+                            <span class="badge bg-success-subtle text-success me-1" title="Accepted">{{ m.row_counts.accepted_rows }} OK</span>
+                            {% if m.row_counts.rejected_rows > 0 %}
+                            <span class="badge bg-danger-subtle text-danger me-1" title="Rejected">{{ m.row_counts.rejected_rows }} Rejected</span>
+                            {% endif %}
+                            {% if m.row_counts.duplicate_rows > 0 %}
+                            <span class="badge bg-warning-subtle text-warning me-1" title="Duplicates">{{ m.row_counts.duplicate_rows }} Dup</span>
+                            {% endif %}
+                            {% else %}
+                            <span class="badge bg-success-subtle text-success me-1">OK</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="font-monospace extra-small text-muted">
+                                {% if m.get('source_file') and m.source_file.sha256_checksum %}
+                                {{ m.source_file.sha256_checksum[:12] }}...
+                                {% else %}
+                                Native
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="small text-muted">{{ m.import_timestamp[:19].replace('T', ' ') if m.get('import_timestamp') else 'Recent' }}</span>
+                        </td>
+                        <td class="text-end pe-4">
+                            <div class="d-inline-flex align-items-center gap-2">
+                                <button class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1" onclick="viewManifest('{{ m.dataset_id }}')">
+                                    <i data-lucide="eye"></i> Manifest
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" onclick="confirmDeleteDataset('{{ m.dataset_id }}', '{{ m.source_file.original_filename if (m.get('source_file') and m.source_file.original_filename) else m.dataset_id }}')">
+                                    <i data-lucide="trash-2"></i> Remove
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <!-- Empty State -->
+        <div class="card-body text-center py-5">
+            <div class="icon-box bg-light-subtle text-muted mx-auto mb-3" style="width: 64px; height: 64px;">
+                <i data-lucide="folder-open" style="width: 32px; height: 32px;"></i>
+            </div>
+            <h5 class="fw-bold mb-2">No Academic Datasets Loaded</h5>
+            <p class="text-muted max-w-700 mx-auto mb-4">
+                Your local lakehouse repository is currently empty. Ingest your first faculty spreadsheet or university result sheet using the guided 11-step import wizard.
+            </p>
+            <a href="{{ url_for('data.import_wizard') }}" class="btn btn-primary d-inline-flex align-items-center gap-2">
+                <i data-lucide="upload-cloud"></i> Launch Guided Import Wizard
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Manifest Modal -->
+<div class="modal fade" id="manifestModal" tabindex="-1" aria-labelledby="manifestModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="manifestModalLabel">Cryptographic Audit Manifest</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <pre id="manifestContent" class="bg-dark text-light p-3 rounded font-monospace extra-small mb-0"><code>Loading manifest...</code></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <div class="icon-box bg-danger-subtle text-danger me-2" style="width: 40px; height: 40px;">
+                    <i data-lucide="alert-triangle"></i>
+                </div>
+                <h5 class="modal-title fw-bold text-danger" id="deleteModalLabel">Remove Dataset</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-3">
+                <p class="mb-2">Are you sure you want to permanently remove this dataset from EduPulse Analytics?</p>
+                <div class="p-3 bg-light rounded border mb-3">
+                    <strong class="d-block text-dark" id="deleteDatasetName">-</strong>
+                    <span class="font-monospace extra-small text-muted" id="deleteDatasetId">-</span>
+                </div>
+                <div class="alert alert-warning py-2 px-3 small mb-0">
+                    <i data-lucide="info" class="me-1"></i>
+                    This action will permanently delete the raw spreadsheet, validated tabular records, analytics cache, and audit manifest from the local lakehouse.
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" id="btnCancelDelete">Cancel</button>
+                <button type="button" class="btn btn-danger btn-sm px-3 shadow-sm d-inline-flex align-items-center gap-1" id="btnConfirmDelete" onclick="executeDeleteDataset()">
+                    <i data-lucide="trash-2"></i> Confirm Removal
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete All Confirmation Modal -->
+<div class="modal fade" id="deleteAllModal" tabindex="-1" aria-labelledby="deleteAllModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <div class="icon-box bg-danger-subtle text-danger me-2" style="width: 40px; height: 40px;">
+                    <i data-lucide="alert-octagon"></i>
+                </div>
+                <h5 class="modal-title fw-bold text-danger" id="deleteAllModalLabel">Delete All Datasets</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-3">
+                <p class="mb-2">Are you sure you want to permanently delete <strong>ALL</strong> academic datasets from the repository?</p>
+                <div class="p-3 bg-light rounded border mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted small">Total Datasets to Purge:</span>
+                        <strong class="text-danger">{{ manifests|length }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted small">Storage Scope:</span>
+                        <span class="small font-monospace">Raw, Validated, Analytics, Manifests</span>
+                    </div>
+                </div>
+                <div class="alert alert-danger py-2 px-3 small mb-0">
+                    <i data-lucide="alert-triangle" class="me-1"></i>
+                    <strong>Warning:</strong> This action cannot be undone. All ingested student marks, grade sheets, computed analytics snapshots, and cryptographic manifests will be wiped from disk.
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal" id="btnCancelDeleteAll">Cancel</button>
+                <button type="button" class="btn btn-danger btn-sm px-3 shadow-sm d-inline-flex align-items-center gap-1" id="btnConfirmDeleteAll" onclick="executeDeleteAllDatasets()">
+                    <i data-lucide="trash-2"></i> Permanently Delete All
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let datasetToDelete = null;
+
+function viewManifest(datasetId) {
+    const modal = new bootstrap.Modal(document.getElementById('manifestModal'));
+    const content = document.getElementById('manifestContent');
+    content.textContent = 'Loading manifest...';
+    modal.show();
+
+    fetch(`/data-management/api/manifest/${datasetId}`)
+        .then(res => res.json())
+        .then(data => {
+            content.textContent = JSON.stringify(data, null, 2);
+        })
+        .catch(err => {
+            content.textContent = 'Failed to load manifest: ' + err;
+        });
+}
+
+function confirmDeleteDataset(datasetId, datasetName) {
+    datasetToDelete = datasetId;
+    document.getElementById('deleteDatasetName').textContent = datasetName;
+    document.getElementById('deleteDatasetId').textContent = datasetId;
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+
+function executeDeleteDataset() {
+    if (!datasetToDelete) return;
+    const btn = document.getElementById('btnConfirmDelete');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Removing...';
+
+    fetch(`/data-management/api/dataset/${datasetToDelete}`, {
+        method: 'DELETE'
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            window.location.reload();
+        } else {
+            alert('Error removing dataset: ' + (data.error || 'Unknown error'));
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="trash-2"></i> Confirm Removal';
+        }
+    })
+    .catch(err => {
+        alert('Network error: ' + err);
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="trash-2"></i> Confirm Removal';
+    });
+}
+
+function confirmDeleteAllDatasets() {
+    const modal = new bootstrap.Modal(document.getElementById('deleteAllModal'));
+    modal.show();
+}
+
+function executeDeleteAllDatasets() {
+    const btn = document.getElementById('btnConfirmDeleteAll');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Purging All...';
+
+    fetch('/data-management/api/datasets/delete-all', {
+        method: 'POST'
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            window.location.reload();
+        } else {
+            alert('Error purging datasets: ' + (data.error || 'Unknown error'));
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="trash-2"></i> Permanently Delete All';
+        }
+    })
+    .catch(err => {
+        alert('Network error: ' + err);
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="trash-2"></i> Permanently Delete All';
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="EduPulse Analytics - Cloud-Based Student Performance Analytics Using Big Data Technologies">
+    <title>{% block title %}EduPulse Analytics — Academic Big Data Platform{% endblock %}</title>
+
+    <!-- Google Fonts: Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Main Navigation Bar -->
+    <nav class="navbar navbar-expand-lg sticky-top navbar-glass py-2" id="mainNavbar">
+        <div class="container-fluid px-lg-4">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('core.landing') }}">
+                <div class="brand-icon">
+                    <i data-lucide="activity" class="icon-brand"></i>
+                </div>
+                <div class="d-flex flex-column">
+                    <span class="brand-name">EduPulse<span class="text-accent">Analytics</span></span>
+                    <span class="brand-tagline">Academic Big Data Platform</span>
+                </div>
+            </a>
+
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                <i data-lucide="menu"></i>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav mx-auto mb-2 mb-lg-0 gap-1">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="{{ url_for('core.landing') }}">
+                            <i data-lucide="home" class="nav-icon"></i> Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/dashboard/' %}active{% endif %}" href="{{ url_for('dashboard.index') }}">
+                            <i data-lucide="layout-dashboard" class="nav-icon"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/academic-analysis' in request.path %}active{% endif %}" href="{{ url_for('academic_analysis.index') }}">
+                            <i data-lucide="bar-chart-2" class="nav-icon"></i> Academic Analysis
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/student-performance' in request.path %}active{% endif %}" href="{{ url_for('student_performance.index') }}">
+                            <i data-lucide="user" class="nav-icon"></i> Student Profile
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/data-management' in request.path %}active{% endif %}" href="{{ url_for('data.catalog') }}">
+                            <i data-lucide="file-up" class="nav-icon"></i> Data Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/class-entry' in request.path %}active{% endif %}" href="{{ url_for('class_entry.index') }}">
+                            <i data-lucide="edit-3" class="nav-icon"></i> Class Entry
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/reports' in request.path %}active{% endif %}" href="{{ url_for('reports.index') }}">
+                            <i data-lucide="file-text" class="nav-icon"></i> Reports
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/settings' in request.path %}active{% endif %}" href="{{ url_for('settings.index') }}">
+                            <i data-lucide="settings" class="nav-icon"></i> Settings
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="d-flex align-items-center gap-2">
+                    <!-- Active Cohort / Batch Project Selector -->
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-primary dropdown-toggle d-flex align-items-center gap-1 py-1 px-2 font-monospace fw-semibold" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="batchSelectorDropdownBtn" title="Current Academic Batch Project">
+                            <i data-lucide="layers" style="width: 14px; height: 14px;" class="text-primary"></i>
+                            <span class="text-truncate" style="max-width: 180px;">{{ active_project.name if active_project else 'All Datasets (No Batch)' }}</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-2" style="min-width: 270px;">
+                            <li class="dropdown-header extra-small text-uppercase fw-bold text-muted px-3">
+                                Academic Batch Projects
+                            </li>
+                            {% if all_projects %}
+                                {% for p in all_projects %}
+                                <li>
+                                    <button type="button" class="dropdown-item d-flex align-items-center justify-content-between px-3 py-2 small {% if active_project and p.project_id == active_project.project_id %}active bg-primary text-white fw-bold{% endif %}" onclick="switchBatchProject('{{ p.project_id }}')">
+                                        <div>
+                                            <div class="fw-semibold">{{ p.name }}</div>
+                                            <small class="{% if active_project and p.project_id == active_project.project_id %}text-white-50{% else %}text-muted{% endif %} extra-small d-block">
+                                                {{ p.degree }} · {{ p.department_code }} · {{ p.dataset_count }} datasets
+                                            </small>
+                                        </div>
+                                        {% if active_project and p.project_id == active_project.project_id %}
+                                        <i data-lucide="check" style="width: 15px; height: 15px;" class="text-white ms-2"></i>
+                                        {% endif %}
+                                    </button>
+                                </li>
+                                {% endfor %}
+                            {% else %}
+                                <li class="px-3 py-2 small text-muted">No projects found.</li>
+                            {% endif %}
+                            <li><hr class="dropdown-divider my-1"></li>
+                            <li>
+                                <button type="button" class="dropdown-item px-3 py-2 text-primary small d-flex align-items-center gap-2 fw-semibold" data-bs-toggle="modal" data-bs-target="#createProjectModal">
+                                    <i data-lucide="plus-circle" style="width: 15px; height: 15px;"></i> Create New Batch Project...
+                                </button>
+                            </li>
+                            <li>
+                                <button type="button" class="dropdown-item px-3 py-2 text-secondary small d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#manageProjectsModal">
+                                    <i data-lucide="folder-cog" style="width: 15px; height: 15px;"></i> Manage / Remove Batches...
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <span class="badge badge-local-first d-none d-md-flex align-items-center gap-1">
+                        <i data-lucide="shield-check" class="badge-icon"></i> Local-First Secure
+                    </span>
+                    <a href="{{ url_for('monitor.index') }}" class="btn btn-outline-secondary btn-sm py-1 px-2" title="PySpark Big Data Engine Monitor">
+                        <i data-lucide="cpu" class="btn-icon"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Container -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Application Footer -->
+    <footer class="app-footer py-4 mt-5">
+        <div class="container-fluid px-lg-5">
+            <div class="row align-items-center gy-3">
+                <div class="col-md-6 text-center text-md-start">
+                    <p class="mb-0 text-muted small">
+                        <strong>EduPulse Analytics</strong> &copy; 2026. Cloud-Based Student Performance Analytics Using Apache PySpark & Flask.
+                    </p>
+                    <p class="mb-0 text-muted extra-small">
+                        Engineered with local-first privacy, FERPA/DPDP compliance, and transparent rule-based indicators.
+                    </p>
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <div class="d-inline-flex align-items-center gap-3">
+                        <span class="badge bg-success-subtle text-success border border-success-subtle small d-flex align-items-center gap-1">
+                            <span class="status-pulse"></span> PySpark 4.2 Ready
+                        </span>
+                        <span class="badge bg-info-subtle text-info border border-info-subtle small">
+                            Storage: File-First Parquet
+                        </span>
+                        {% if aws_enabled %}
+                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle small">
+                            AWS S3: Active
+                        </span>
+                        {% else %}
+                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle small">
+                            AWS S3: Disabled (Local Only)
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Create Batch Project Modal -->
+    <div class="modal fade" id="createProjectModal" tabindex="-1" aria-labelledby="createProjectModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary-subtle text-primary py-3">
+                    <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="createProjectModalLabel">
+                        <i data-lucide="folder-plus"></i> Create Academic Batch Project
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="createProjectForm" onsubmit="submitCreateProject(event)">
+                    <div class="modal-body p-4">
+                        <p class="text-muted small mb-3">
+                            Organize multi-semester result sheets, internal evaluations, and laboratory assessments under a unified academic cohort (e.g., <strong>2023 - 2027 Batch</strong>).
+                        </p>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Batch Project Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="newProjectName" placeholder="e.g. Batch 2023 - 2027 (CSE)" required>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold">Start Year <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control font-monospace" id="newProjectStartYear" value="2023" min="2000" max="2050" required onchange="autoUpdateProjectName()">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold">Graduation Year <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control font-monospace" id="newProjectEndYear" value="2027" min="2000" max="2050" required onchange="autoUpdateProjectName()">
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-8">
+                                <label class="form-label small fw-semibold">Department <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="newProjectDept" value="Computer Science & Engineering" required onchange="autoUpdateProjectName()">
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label small fw-semibold">Dept Code</label>
+                                <input type="text" class="form-control text-uppercase font-monospace" id="newProjectDeptCode" value="CSE">
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold">Degree / Program</label>
+                                <select class="form-select form-select-sm" id="newProjectDegree">
+                                    <option value="B.Tech" selected>B.Tech (4 Years)</option>
+                                    <option value="M.Tech">M.Tech (2 Years)</option>
+                                    <option value="B.Sc">B.Sc (3 Years)</option>
+                                    <option value="MCA">MCA (2 Years)</option>
+                                    <option value="MBA">MBA (2 Years)</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold">Academic Regulation</label>
+                                <input type="text" class="form-control form-control-sm" id="newProjectRegulation" value="R20 / Autonomous">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Description / Notes <span class="text-muted fw-normal">(Optional)</span></label>
+                            <input type="text" class="form-control form-control-sm" id="newProjectDesc" placeholder="e.g. Regular 4-Year B.Tech CSE Cohort">
+                        </div>
+
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="newProjectSetActive" checked>
+                            <label class="form-check-label small fw-semibold" for="newProjectSetActive">Set as active workspace batch immediately</label>
+                        </div>
+
+                        <div id="createProjectAlert" class="alert alert-danger small d-none mt-3 mb-0"></div>
+                    </div>
+                    <div class="modal-footer bg-light py-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary btn-sm d-flex align-items-center gap-1" id="saveProjectBtn">
+                            <i data-lucide="check"></i> Create Batch Project
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manage Batch Projects Modal -->
+    <div class="modal fade" id="manageProjectsModal" tabindex="-1" aria-labelledby="manageProjectsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-light py-3">
+                    <h5 class="modal-title fw-bold d-flex align-items-center gap-2 text-dark" id="manageProjectsModalLabel">
+                        <i data-lucide="folder-cog" class="text-primary"></i> Manage Academic Batch Projects
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted small mb-3">
+                        Switch the active cohort workspace or remove obsolete batch projects. Removing a project leaves all validated datasets and student records intact in the system catalog.
+                    </p>
+                    <div class="list-group shadow-xs">
+                        {% for p in all_projects %}
+                        <div class="list-group-item d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 {% if active_project and (p.project_id == active_project.project_id or p.id == active_project.id) %}border-primary bg-primary-subtle bg-opacity-10{% endif %}">
+                            <div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <h6 class="mb-0 fw-bold text-dark">{{ p.name }}</h6>
+                                    {% if active_project and (p.project_id == active_project.project_id or p.id == active_project.id) %}
+                                    <span class="badge bg-primary text-white extra-small">Active Workspace</span>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted extra-small d-block mt-1">
+                                    <strong>{{ p.batch }}</strong> · {{ p.department }} ({{ p.department_code }}) · {{ p.dataset_count }} datasets · {{ p.semesters_count }} Semesters
+                                </small>
+                                {% if p.description %}
+                                <small class="text-muted extra-small d-block text-truncate mt-1" style="max-width: 480px;">{{ p.description }}</small>
+                                {% endif %}
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                {% if not active_project or (p.project_id != active_project.project_id and p.id != active_project.id) %}
+                                <button type="button" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1" onclick="switchBatchProject('{{ p.project_id }}')">
+                                    <i data-lucide="check" style="width: 14px; height: 14px;"></i> Set Active
+                                </button>
+                                {% endif %}
+                                <button type="button" class="btn btn-outline-danger btn-sm d-flex align-items-center gap-1" title="Remove Batch Project" onclick="confirmDeleteBatchProject('{{ p.project_id }}', '{{ p.name|e }}')">
+                                    <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> Remove
+                                </button>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="p-4 text-center text-muted">No batch projects found.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2 justify-content-between">
+                    <button type="button" class="btn btn-primary btn-sm d-flex align-items-center gap-1" data-bs-target="#createProjectModal" data-bs-toggle="modal">
+                        <i data-lucide="plus-circle" style="width: 14px; height: 14px;"></i> Create New Batch...
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Delete Batch Project Modal -->
+    <div class="modal fade" id="deleteProjectModal" tabindex="-1" aria-labelledby="deleteProjectModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-danger-subtle text-danger py-3">
+                    <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="deleteProjectModalLabel">
+                        <i data-lucide="alert-triangle"></i> Remove Batch Project
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="mb-2">Are you sure you want to remove the cohort project <strong id="deleteProjectTargetName" class="text-danger"></strong>?</p>
+                    <div class="alert alert-warning extra-small mb-0 border-0 shadow-xs">
+                        <i data-lucide="shield-alert" class="me-1" style="width: 14px; height: 14px;"></i>
+                        <strong>Data Safety Guarantee:</strong> All validated student marksheets and assessment datasets enrolled under this project will <strong>remain preserved</strong> in the system catalog. Only the cohort grouping and workspace configuration will be removed.
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger btn-sm d-flex align-items-center gap-1" id="confirmDeleteProjectBtn" onclick="executeDeleteProject()">
+                        <i data-lucide="trash-2"></i> Yes, Remove Project
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5.3 Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    
+    <!-- Lucide Icons Library -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Custom Application JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+    <script>
+    // Project & Batch Switching Functionality
+    async function switchBatchProject(projectId) {
+        try {
+            const res = await fetch('{{ url_for("projects.select_active_project") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ project_id: projectId })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                window.location.reload();
+            } else {
+                alert('Failed to switch batch: ' + (data.message || 'Unknown error'));
+            }
+        } catch (e) {
+            alert('Error switching batch project: ' + e.message);
+        }
+    }
+
+    function autoUpdateProjectName() {
+        const start = document.getElementById('newProjectStartYear').value;
+        const end = document.getElementById('newProjectEndYear').value;
+        const code = document.getElementById('newProjectDeptCode').value || 'CSE';
+        const nameInput = document.getElementById('newProjectName');
+        if (start && end) {
+            nameInput.value = `Batch ${start} - ${end} (${code.toUpperCase()})`;
+        }
+    }
+
+    async function submitCreateProject(e) {
+        e.preventDefault();
+        const btn = document.getElementById('saveProjectBtn');
+        const alertBox = document.getElementById('createProjectAlert');
+        alertBox.classList.add('d-none');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Creating...';
+
+        const payload = {
+            name: document.getElementById('newProjectName').value,
+            start_year: parseInt(document.getElementById('newProjectStartYear').value),
+            end_year: parseInt(document.getElementById('newProjectEndYear').value),
+            department: document.getElementById('newProjectDept').value,
+            department_code: document.getElementById('newProjectDeptCode').value,
+            degree: document.getElementById('newProjectDegree').value,
+            regulation: document.getElementById('newProjectRegulation').value,
+            description: document.getElementById('newProjectDesc').value,
+            set_active: document.getElementById('newProjectSetActive').checked
+        };
+
+        try {
+            const res = await fetch('{{ url_for("projects.create_project") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (res.ok && data.status === 'success') {
+                window.location.reload();
+            } else {
+                alertBox.textContent = data.message || 'Failed to create project.';
+                alertBox.classList.remove('d-none');
+                btn.disabled = false;
+                btn.innerHTML = '<i data-lucide="check"></i> Create Batch Project';
+                if (window.lucide) lucide.createIcons();
+            }
+        } catch (err) {
+            alertBox.textContent = 'Error: ' + err.message;
+            alertBox.classList.remove('d-none');
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="check"></i> Create Batch Project';
+            if (window.lucide) lucide.createIcons();
+        }
+    }
+
+    let projectToDeleteId = null;
+
+    function confirmDeleteBatchProject(projectId, projectName) {
+        projectToDeleteId = projectId;
+        const nameEl = document.getElementById('deleteProjectTargetName');
+        if (nameEl) nameEl.textContent = projectName || projectId;
+
+        // Hide manage modal if open
+        const manageEl = document.getElementById('manageProjectsModal');
+        if (manageEl) {
+            const manageModal = bootstrap.Modal.getInstance(manageEl);
+            if (manageModal) manageModal.hide();
+        }
+
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteProjectModal'));
+        deleteModal.show();
+    }
+
+    async function executeDeleteProject() {
+        if (!projectToDeleteId) return;
+        const btn = document.getElementById('confirmDeleteProjectBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Removing...';
+
+        try {
+            const res = await fetch(`/projects/api/delete/${encodeURIComponent(projectToDeleteId)}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+            if (res.ok && data.status === 'success') {
+                window.location.reload();
+            } else {
+                alert('Failed to remove project: ' + (data.message || 'Unknown error'));
+                btn.disabled = false;
+                btn.innerHTML = '<i data-lucide="trash-2"></i> Yes, Remove Project';
+                if (window.lucide) lucide.createIcons();
+            }
+        } catch (err) {
+            alert('Error removing project: ' + err.message);
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="trash-2"></i> Yes, Remove Project';
+            if (window.lucide) lucide.createIcons();
+        }
+    }
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

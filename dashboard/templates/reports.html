@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block title %}Institutional Reports & Briefings — EduPulse Analytics{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+    <!-- Header & Filter Controls -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="{{ url_for('core.landing') }}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Reports & Briefings</li>
+                </ol>
+            </nav>
+            <h2 class="h3 fw-bold mb-0">Institutional Reports & Analytical Exports</h2>
+            <p class="text-muted small mb-0">
+                Generate printable executive briefings, student ledgers, remedial action lists, and standardized CSV analytics.
+            </p>
+        </div>
+
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            {% if active_project and active_project.id != 'ALL' %}
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 extra-small d-flex align-items-center gap-1">
+                <i data-lucide="folder-git-2" style="width: 13px; height: 13px;"></i>
+                Cohort: <strong>{{ active_project.name }}</strong>
+            </span>
+            {% endif %}
+
+            {% if manifests %}
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <label class="form-label extra-small text-uppercase fw-semibold text-muted mb-0">Target Scope:</label>
+                <select class="form-select form-select-sm shadow-sm" style="min-width: 250px;" onchange="updateReportFilter('dataset_id', this.value)">
+                    {% if manifests|length > 1 %}
+                    <option value="ALL" {% if selected_id == 'ALL' %}selected{% endif %}>
+                        All Semesters Combined (Cohort-Wide — {{ manifests|length }} Sheets)
+                    </option>
+                    {% endif %}
+                    {% for m in manifests %}
+                    <option value="{{ m.dataset_id }}" {% if m.dataset_id == selected_id %}selected{% endif %}>
+                        {{ (m.source_file and m.source_file.original_filename) if m.get('source_file') else m.dataset_id }} {% if m.detected_semester %}(Sem {{ m.detected_semester }}){% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <label class="form-label extra-small text-uppercase fw-semibold text-muted mb-0 ms-1">Evaluation:</label>
+                <select class="form-select form-select-sm shadow-sm" style="min-width: 170px;" onchange="updateReportFilter('assessment_type', this.value)">
+                    <option value="ALL" {% if not selected_assessment_type or selected_assessment_type == 'ALL' %}selected{% endif %}>All Evaluations</option>
+                    <option value="THEORY" {% if selected_assessment_type == 'THEORY' %}selected{% endif %}>Theory Courses Only</option>
+                    <option value="LABORATORY" {% if selected_assessment_type == 'LABORATORY' %}selected{% endif %}>Laboratory / Practicals</option>
+                    <option value="SEMESTER_EXAM" {% if selected_assessment_type == 'SEMESTER_EXAM' %}selected{% endif %}>Semester Exams</option>
+                    <option value="INTERNAL" {% if selected_assessment_type == 'INTERNAL' %}selected{% endif %}>Internal / Mid Exams</option>
+                </select>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if selected_id %}
+    <!-- Export Options Cards (5 Core Institutional Reports) -->
+    <div class="row g-3 mb-4">
+        <!-- 1. Executive HTML Briefing -->
+        <div class="col-md-6 col-xl">
+            <div class="card h-100 border-0 shadow-sm p-3 bg-white d-flex flex-column">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="icon-box bg-primary-subtle text-primary">
+                        <i data-lucide="file-text"></i>
+                    </div>
+                    <span class="badge bg-primary-subtle text-primary extra-small">Printable</span>
+                </div>
+                <h6 class="fw-bold mb-1">Executive Briefing</h6>
+                <p class="text-muted extra-small mb-3 flex-grow-1">
+                    Formal briefing with institutional header, KPIs, subject difficulty index, and faculty/HOD signature blocks.
+                </p>
+                <div class="d-flex gap-1 mt-auto">
+                    <a href="{{ url_for('reports.download_html', dataset_id=selected_id, assessment_type=selected_assessment_type, project_id=project_id) }}" target="_blank" class="btn btn-outline-primary btn-sm flex-fill d-inline-flex align-items-center justify-content-center gap-1 extra-small">
+                        <i data-lucide="external-link" style="width: 13px; height: 13px;"></i> View
+                    </a>
+                    <a href="{{ url_for('reports.download_html', dataset_id=selected_id, assessment_type=selected_assessment_type, project_id=project_id, download=1) }}" class="btn btn-primary btn-sm flex-fill d-inline-flex align-items-center justify-content-center gap-1 extra-small">
+                        <i data-lucide="download" style="width: 13px; height: 13px;"></i> Download
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Student Marks & Grade Ledger CSV -->
+        <div class="col-md-6 col-xl">
+            <div class="card h-100 border-0 shadow-sm p-3 bg-white d-flex flex-column">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="icon-box bg-success-subtle text-success">
+                        <i data-lucide="clipboard-list"></i>
+                    </div>
+                    <span class="badge bg-success-subtle text-success extra-small">Roster</span>
+                </div>
+                <h6 class="fw-bold mb-1">Student Marks Ledger</h6>
+                <p class="text-muted extra-small mb-3 flex-grow-1">
+                    Consolidated student ledger: Roll Number, Courses Evaluated, Passed, Failed/Backlogs, Overall SGPA / Marks %, and Final Result.
+                </p>
+                <a href="{{ url_for('reports.download_csv', dataset_id=selected_id, type='ledger', assessment_type=selected_assessment_type, project_id=project_id) }}" class="btn btn-outline-success btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1 mt-auto extra-small">
+                    <i data-lucide="download" style="width: 13px; height: 13px;"></i> Export Ledger CSV
+                </a>
+            </div>
+        </div>
+
+        <!-- 3. Course Performance & Difficulty Summary CSV -->
+        <div class="col-md-6 col-xl">
+            <div class="card h-100 border-0 shadow-sm p-3 bg-white d-flex flex-column">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="icon-box bg-info-subtle text-info">
+                        <i data-lucide="bar-chart-2"></i>
+                    </div>
+                    <span class="badge bg-info-subtle text-info extra-small">Course Stats</span>
+                </div>
+                <h6 class="fw-bold mb-1">Course Summary CSV</h6>
+                <p class="text-muted extra-small mb-3 flex-grow-1">
+                    Subject code, full subject name, Theory/Lab type, enrollment, pass rate %, average score, std dev, and computed difficulty indices.
+                </p>
+                <a href="{{ url_for('reports.download_csv', dataset_id=selected_id, type='subject', assessment_type=selected_assessment_type, project_id=project_id) }}" class="btn btn-outline-info btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1 mt-auto extra-small">
+                    <i data-lucide="download" style="width: 13px; height: 13px;"></i> Export Courses CSV
+                </a>
+            </div>
+        </div>
+
+        <!-- 4. Backlogs & Remedial Action List CSV -->
+        <div class="col-md-6 col-xl">
+            <div class="card h-100 border-0 shadow-sm p-3 bg-white d-flex flex-column">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="icon-box bg-warning-subtle text-warning">
+                        <i data-lucide="alert-octagon"></i>
+                    </div>
+                    <span class="badge bg-warning-subtle text-warning extra-small">Actionable</span>
+                </div>
+                <h6 class="fw-bold mb-1">Backlog & Remedial List</h6>
+                <p class="text-muted extra-small mb-3 flex-grow-1">
+                    Actionable list of all students with active backlogs, specific course details, and tutorial/supplementary intervention recommendations.
+                </p>
+                <a href="{{ url_for('reports.download_csv', dataset_id=selected_id, type='remedial', assessment_type=selected_assessment_type, project_id=project_id) }}" class="btn btn-outline-warning btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1 mt-auto extra-small">
+                    <i data-lucide="download" style="width: 13px; height: 13px;"></i> Export Remedial CSV
+                </a>
+            </div>
+        </div>
+
+        <!-- 5. Normalized Audit Dataset CSV -->
+        <div class="col-md-6 col-xl">
+            <div class="card h-100 border-0 shadow-sm p-3 bg-white d-flex flex-column">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="icon-box bg-purple-subtle text-purple">
+                        <i data-lucide="database"></i>
+                    </div>
+                    <span class="badge bg-purple-subtle text-purple extra-small">Sanitized</span>
+                </div>
+                <h6 class="fw-bold mb-1">Audit Dataset CSV</h6>
+                <p class="text-muted extra-small mb-3 flex-grow-1">
+                    Complete sanitized lakehouse record with formula injection neutralized (CWE-1236), ready for statistical archiving.
+                </p>
+                <div class="d-flex gap-1 mt-auto">
+                    <a href="{{ url_for('reports.download_csv', dataset_id=selected_id, type='support', assessment_type=selected_assessment_type, project_id=project_id) }}" class="btn btn-outline-secondary btn-sm flex-fill d-inline-flex align-items-center justify-content-center gap-1 extra-small" title="Diagnostic Support Alerts">
+                        <i data-lucide="alert-triangle" style="width: 12px; height: 12px;"></i> Alerts
+                    </a>
+                    <a href="{{ url_for('reports.download_csv', dataset_id=selected_id, type='audit', project_id=project_id) }}" class="btn btn-outline-purple btn-sm flex-fill d-inline-flex align-items-center justify-content-center gap-1 extra-small" title="Full Normalized Dataset">
+                        <i data-lucide="download" style="width: 12px; height: 12px;"></i> Full CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live In-Browser Preview Container -->
+    <div class="card border-0 shadow-sm bg-white mb-4">
+        <div class="card-header bg-white py-3 border-light-subtle d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                    <i data-lucide="eye" class="text-primary"></i> Live Executive Briefing Preview
+                </h5>
+                <span class="badge bg-light text-muted border">Scope: {{ selected_id }}</span>
+                {% if selected_assessment_type and selected_assessment_type != 'ALL' %}
+                <span class="badge bg-info-subtle text-info border border-info-subtle">{{ selected_assessment_type }}</span>
+                {% endif %}
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1 shadow-sm" onclick="printPreviewFrame()">
+                    <i data-lucide="printer" style="width: 14px; height: 14px;"></i> Print / Save as PDF
+                </button>
+                <a href="{{ url_for('reports.download_html', dataset_id=selected_id, assessment_type=selected_assessment_type, project_id=project_id) }}" target="_blank" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1">
+                    <i data-lucide="maximize-2" style="width: 14px; height: 14px;"></i> Open Full Page
+                </a>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <iframe id="previewReportFrame" src="{{ url_for('reports.download_html', dataset_id=selected_id, assessment_type=selected_assessment_type, project_id=project_id) }}" style="width: 100%; height: 650px; border: none;" title="Executive Briefing Preview"></iframe>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="card border-0 shadow-sm py-5 text-center">
+        <div class="icon-box bg-light-subtle text-muted mx-auto mb-3" style="width: 64px; height: 64px;">
+            <i data-lucide="file-x" style="width: 32px; height: 32px;"></i>
+        </div>
+        <h4 class="fw-bold mb-2">No Processed Datasets Found</h4>
+        <p class="text-muted max-w-700 mx-auto mb-4">
+            Ingest and process an academic marksheet file to generate executive briefings, student ledgers, and remedial lists.
+        </p>
+        <div class="d-flex justify-content-center gap-2">
+            <a href="{{ url_for('data.import_wizard') }}" class="btn btn-primary d-inline-flex align-items-center gap-2">
+                <i data-lucide="upload-cloud"></i> Ingest Dataset
+            </a>
+            <a href="{{ url_for('monitor.index') }}" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2">
+                <i data-lucide="cpu"></i> Big Data Engine
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function updateReportFilter(param, val) {
+    const url = new URL(window.location.href);
+    url.searchParams.set(param, val);
+    window.location.href = url.toString();
+}
+
+function printPreviewFrame() {
+    const iframe = document.getElementById('previewReportFrame');
+    if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+    } else {
+        window.open('{{ url_for("reports.download_html", dataset_id=selected_id, assessment_type=selected_assessment_type, project_id=project_id) }}', '_blank');
+    }
+}
+</script>
+{% endblock %}

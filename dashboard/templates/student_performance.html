@@ -1,0 +1,701 @@
+{% extends "base.html" %}
+
+{% block title %}Student Academic Profile — {{ record.student_id if record else 'Search' }} — EduPulse Analytics{% endblock %}
+
+{% block extra_css %}
+<!-- Plotly.js CDN -->
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+@media print {
+    .navbar, .breadcrumb, form, .btn, .no-print {
+        display: none !important;
+    }
+    .card {
+        border: 1px solid #ddd !important;
+        box-shadow: none !important;
+    }
+    body {
+        background: #fff !important;
+    }
+}
+.sem-tab-btn.active {
+    background-color: var(--bs-primary) !important;
+    color: #fff !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+    <!-- Header Breadcrumb & Search Bar -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 no-print">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="{{ url_for('core.landing') }}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Student Profile</li>
+                </ol>
+            </nav>
+            <h2 class="h3 fw-bold mb-0">Longitudinal Student Academic Trajectory</h2>
+            <p class="text-muted small mb-0">
+                Multi-semester trajectory, cumulative CGPA calculation, course grades, and active backlog diagnostics.
+            </p>
+        </div>
+
+        <!-- Student Search Form -->
+        <form method="GET" class="d-flex flex-column align-items-end gap-1">
+            <div class="input-group input-group-sm shadow-sm" style="min-width: 320px;">
+                <span class="input-group-text bg-white border-end-0"><i data-lucide="search" class="nav-icon text-muted"></i></span>
+                <input type="text" class="form-control border-start-0" name="student_id" id="studentSearchInput" list="studentDataList" value="{{ searched_id }}" placeholder="Enter Student Roll No (e.g. 23R11A0519)..." required>
+                <button class="btn btn-primary px-3" type="submit">Inspect Profile</button>
+            </div>
+            <!-- Datalist for roll number autocomplete -->
+            <datalist id="studentDataList">
+                {% for sid in all_student_ids %}
+                <option value="{{ sid }}"></option>
+                {% endfor %}
+            </datalist>
+        </form>
+    </div>
+
+    <!-- Quick Roll Number Picker Chips -->
+    {% if sample_students %}
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-4 p-2 bg-light rounded border border-light-subtle no-print">
+        <span class="extra-small text-uppercase fw-semibold text-muted d-flex align-items-center gap-1 ps-1">
+            <i data-lucide="zap" class="text-warning"></i> Quick Select:
+        </span>
+        {% for s in sample_students %}
+        <a href="?student_id={{ s.student_id }}" class="badge text-decoration-none {% if s.student_id == searched_id %}bg-primary text-white{% else %}bg-white text-dark border{% endif %} py-1 px-2 font-monospace">
+            {{ s.student_id }}
+            <span class="text-muted extra-small">({{ s.semesters_count }} Sems)</span>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if record %}
+    <!-- Student Master Identity Banner -->
+    <div class="card border-0 shadow-sm p-4 bg-white mb-4">
+        <div class="row align-items-center gy-3">
+            <div class="col-md-7">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="icon-box bg-primary text-white rounded-circle shadow-sm" style="width: 60px; height: 60px;">
+                        <i data-lucide="graduation-cap" style="width: 30px; height: 30px;"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <h3 class="fw-bold mb-0 font-monospace text-dark" id="displayRollNo">{{ record.student_id }}</h3>
+                            <button type="button" class="btn btn-sm btn-link text-muted p-0 no-print" onclick="togglePrivacyMask()" title="Toggle Privacy Masking">
+                                <i data-lucide="eye" id="maskIcon"></i>
+                            </button>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                {{ record.department }}
+                            </span>
+                        </div>
+                        <div class="d-flex flex-wrap align-items-center gap-2 text-muted small">
+                            {% if record.student_name %}
+                            <strong class="text-dark">{{ record.student_name }}</strong>
+                            <span>&bull;</span>
+                            {% endif %}
+                            <span><i data-lucide="calendar" class="badge-icon me-1"></i> {{ record.batch }}</span>
+                            <span>&bull;</span>
+                            <span class="text-success"><i data-lucide="check-circle" class="badge-icon me-1"></i> {{ record.total_courses_taken }} Courses Evaluated</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-5 text-md-end no-print">
+                <div class="d-inline-flex gap-2">
+                    <button class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 shadow-sm" onclick="window.print()">
+                        <i data-lucide="printer"></i> Print Transcript
+                    </button>
+                    <a href="{{ url_for('academic_analysis.index', dataset_id='ALL') }}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1 shadow-sm">
+                        <i data-lucide="bar-chart-2"></i> Class Analytics
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4 Key Institutional Metric Scorecards -->
+    <div class="row g-3 mb-4">
+        <!-- Cumulative CGPA -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm p-3 bg-white h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="icon-box bg-purple-subtle text-purple">
+                        <i data-lucide="award"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted extra-small text-uppercase fw-semibold">Cumulative CGPA</span>
+                        <h3 class="mb-0 fw-bold text-purple">{{ record.cgpa if record.cgpa is not none else 'N/A' }} <span class="small text-muted fw-normal">/ 10</span></h3>
+                        <small class="text-muted extra-small">Across {{ record.semesters_list|length }} Semesters Evaluated</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Course Completion Rate -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm p-3 bg-white h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="icon-box bg-success-subtle text-success">
+                        <i data-lucide="check-circle-2"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted extra-small text-uppercase fw-semibold">Evaluations Cleared</span>
+                        <h3 class="mb-0 fw-bold text-success">{{ record.total_passed }} <span class="small text-muted fw-normal">/ {{ record.total_courses_taken }}</span></h3>
+                        <small class="text-muted extra-small">{{ record.pass_percentage }}% Completion Rate</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Academic Standing / Backlogs -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm p-3 bg-white h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="icon-box {% if record.backlogs_count > 0 %}bg-danger-subtle text-danger{% else %}bg-success-subtle text-success{% endif %}">
+                        <i data-lucide="{% if record.backlogs_count > 0 %}alert-triangle{% else %}shield-check{% endif %}"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted extra-small text-uppercase fw-semibold">Degree Standing</span>
+                        <h5 class="mb-0 fw-bold {% if record.backlogs_count > 0 %}text-danger{% else %}text-success{% endif %}">
+                            {{ record.academic_standing }}
+                        </h5>
+                        <small class="text-muted extra-small">
+                            {% if record.backlogs_count > 0 %}Remedial action needed{% else %}Full Regular Clearance{% endif %}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trajectory & Momentum -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm p-3 bg-white h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="icon-box bg-primary-subtle text-primary">
+                        <i data-lucide="trending-up"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted extra-small text-uppercase fw-semibold">Academic Trajectory</span>
+                        <h6 class="mb-0 fw-bold text-primary">{{ record.trajectory_trend }}</h6>
+                        <small class="text-muted extra-small">
+                            Lowest: {{ record.min_sgpa }} ➔ Peak: {{ record.max_sgpa }} SGPA
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Backlogs Diagnostic Banner (if any) -->
+    {% if record.backlogs_count > 0 %}
+    <div class="card border-danger-subtle bg-danger-subtle p-3 mb-4 shadow-sm">
+        <div class="d-flex align-items-start gap-3">
+            <div class="icon-box bg-danger text-white rounded-circle flex-shrink-0" style="width: 40px; height: 40px;">
+                <i data-lucide="alert-octagon"></i>
+            </div>
+            <div class="flex-grow-1">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+                    <h5 class="fw-bold text-danger mb-0">Active Remedial Attention Required ({{ record.backlogs_count }} Courses Pending)</h5>
+                    <span class="badge bg-danger text-white">Degree Clearance Pending</span>
+                </div>
+                <p class="text-muted small mb-2">
+                    The student has outstanding backlog evaluation(s) in early semesters. Below is the list of courses requiring supplementary examination registration:
+                </p>
+                <div class="row g-2">
+                    {% for b in record.backlogs_list %}
+                    <div class="col-md-6 col-lg-3">
+                        <div class="p-2 bg-white rounded border border-danger-subtle h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <span class="badge bg-light text-muted border extra-small mb-1">Semester {{ b.semester }}</span>
+                                <div class="fw-bold font-monospace text-danger small">{{ b.subject_code }}</div>
+                                <div class="text-dark small text-truncate" title="{{ b.subject_name }}">{{ b.subject_name or 'Subject Course' }}</div>
+                                <div class="extra-small text-muted mt-1">Grade: <strong class="text-danger">{{ b.letter_grade or 'FAIL' }}</strong> (0.0 GP)</div>
+                            </div>
+                            <button type="button" class="btn btn-outline-success btn-sm w-100 mt-2 py-1 extra-small fw-semibold d-flex align-items-center justify-content-center gap-1 clear-backlog-btn"
+                                    data-subject-code="{{ b.subject_code }}"
+                                    data-subject-name="{{ b.subject_name or '' }}"
+                                    data-semester="{{ b.semester }}"
+                                    data-grade="{{ b.letter_grade or 'FAIL' }}">
+                                <i data-lucide="check-circle" style="width: 13px; height: 13px;"></i> Clear Backlog
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Longitudinal Progression Chart Card -->
+    {% if record.progression and record.progression|length > 1 %}
+    <div class="card border-0 shadow-sm p-4 bg-white mb-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                <i data-lucide="line-chart" class="text-primary"></i> Multi-Semester Progression & SGPA Trajectory
+            </h5>
+            <div class="d-flex align-items-center gap-3 extra-small text-muted no-print">
+                <span class="d-flex align-items-center gap-1"><span class="badge bg-success" style="width:8px; height:8px; padding:0; border-radius:50%;"></span> Actual SGPA</span>
+                <span class="d-flex align-items-center gap-1"><span style="border-top: 2px dashed #f59e0b; width: 14px; display:inline-block;"></span> First Class (6.0)</span>
+                <span class="d-flex align-items-center gap-1"><span style="border-top: 2px dashed #ef4444; width: 14px; display:inline-block;"></span> Pass Threshold (5.0)</span>
+            </div>
+        </div>
+        <div id="progressionChart" style="height: 300px;"></div>
+    </div>
+    {% endif %}
+
+    <!-- Complete Course History & Evaluation Results Card -->
+    <div class="card border-0 shadow-sm bg-white mb-4">
+        <div class="card-header bg-white py-3 border-light-subtle d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                <i data-lucide="file-spreadsheet" class="text-primary"></i> Course History & Evaluation Results
+            </h5>
+
+            <!-- Semester Filter Pills -->
+            <div class="d-flex flex-wrap align-items-center gap-1 no-print" id="semesterFilterPills">
+                <button type="button" class="btn btn-sm btn-outline-secondary sem-tab-btn active py-1 px-2 extra-small" onclick="filterTable('ALL', this)">
+                    All Courses ({{ record.total_courses_taken }})
+                </button>
+                {% for sem in record.semesters_list %}
+                <button type="button" class="btn btn-sm btn-outline-secondary sem-tab-btn py-1 px-2 extra-small" onclick="filterTable('{{ sem }}', this)">
+                    Sem {{ sem }} ({{ record.semesters_dict[sem].courses_count }})
+                </button>
+                {% endfor %}
+                {% if record.backlogs_count > 0 %}
+                <button type="button" class="btn btn-sm btn-outline-danger sem-tab-btn py-1 px-2 extra-small" onclick="filterTable('BACKLOGS', this)">
+                    <i data-lucide="alert-circle" class="badge-icon me-1"></i> Backlogs ({{ record.backlogs_count }})
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="coursesTable">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Semester</th>
+                        <th>Course Code</th>
+                        <th>Course Name</th>
+                        <th>Grade</th>
+                        <th>Grade Points</th>
+                        <th>Credits</th>
+                        <th class="text-end pe-4">Result Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in record.course_history %}
+                    {% set is_fail = (c.status in ['FAIL', 'FAILED']) or (c.grade_status in ['FAIL', 'FAILED']) or (c.letter_grade in ['F', 'AB']) %}
+                    <tr class="course-row sem-row-{{ c.semester }} {% if is_fail %}backlog-row bg-danger-subtle bg-opacity-25{% endif %}" data-semester="{{ c.semester }}" data-backlog="{{ 'true' if is_fail else 'false' }}">
+                        <td class="ps-4 fw-semibold text-secondary">
+                            <span class="badge bg-light text-dark border">Sem {{ c.semester }}</span>
+                        </td>
+                        <td class="font-monospace text-primary fw-bold">{{ c.subject_code }}</td>
+                        <td>
+                            <strong class="text-dark">{{ c.subject_name or 'Course Assessment' }}</strong>
+                            {% if c.assessment_name and c.assessment_name != 'Semester Examination' %}
+                            <small class="text-muted d-block extra-small">{{ c.assessment_name }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if c.letter_grade is defined and c.letter_grade %}
+                                {% if c.letter_grade in ['O', 'A+', 'A'] %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 fw-bold fs-6">
+                                    {{ c.letter_grade }}
+                                </span>
+                                {% elif c.letter_grade in ['B+', 'B', 'C'] %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fw-bold fs-6">
+                                    {{ c.letter_grade }}
+                                </span>
+                                {% elif c.letter_grade in ['F', 'AB'] %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 fw-bold fs-6">
+                                    {{ c.letter_grade }}
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary px-2 py-1 fw-bold fs-6">
+                                    {{ c.letter_grade }}
+                                </span>
+                                {% endif %}
+                            {% elif c.total_marks is defined and c.total_marks is not none %}
+                                <strong>{{ c.total_marks }}</strong> <span class="text-muted small">({{ c.percentage }}%)</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if c.grade_points is defined and c.grade_points is not none %}
+                            <span class="font-monospace fw-semibold {% if c.grade_points == 0 %}text-danger{% else %}text-dark{% endif %}">
+                                {{ "%.1f"|format(c.grade_points) }}
+                            </span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if c.credits is defined and c.credits is not none and c.credits > 0 %}
+                            <span class="badge bg-light text-dark border">{{ c.credits }}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-4">
+                            {% set st = c.status or c.grade_status %}
+                            {% if is_fail %}
+                            <div class="d-inline-flex align-items-center justify-content-end gap-1">
+                                <span class="badge bg-danger text-white px-2 py-1">
+                                    <i data-lucide="x-circle" class="badge-icon me-1"></i> FAILED
+                                </span>
+                                <button type="button" class="btn btn-sm btn-outline-success py-0 px-2 extra-small fw-semibold d-inline-flex align-items-center gap-1 clear-backlog-btn"
+                                        title="Update / Clear Backlog"
+                                        data-subject-code="{{ c.subject_code }}"
+                                        data-subject-name="{{ c.subject_name or '' }}"
+                                        data-semester="{{ c.semester }}"
+                                        data-grade="{{ c.letter_grade or 'FAIL' }}">
+                                    <i data-lucide="check-circle" style="width: 12px; height: 12px;"></i> Clear
+                                </button>
+                            </div>
+                            {% elif st in ['PASS', 'PASSED'] or (c.letter_grade and c.letter_grade not in ['F', 'AB']) %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                                <i data-lucide="check" class="badge-icon me-1"></i> PASSED
+                            </span>
+                            {% elif st == 'ABSENT' or c.letter_grade == 'AB' %}
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1">
+                                <i data-lucide="clock" class="badge-icon me-1"></i> ABSENT
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary-subtle text-secondary px-2 py-1">{{ st or 'EVALUATED' }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% elif searched_id %}
+    <!-- Not Found State -->
+    <div class="card border-0 shadow-sm p-5 text-center bg-white my-4">
+        <div class="icon-box bg-light-subtle text-muted mx-auto mb-3" style="width: 64px; height: 64px;">
+            <i data-lucide="user-x" style="width: 32px; height: 32px;"></i>
+        </div>
+        <h5 class="fw-bold mb-2">Student Record Not Found</h5>
+        <p class="text-muted small max-w-700 mx-auto mb-3">
+            No academic evaluation records matching identifier <code>{{ searched_id }}</code> were found across your uploaded lakehouse datasets.
+        </p>
+        <div>
+            <a href="{{ url_for('student_performance.index') }}" class="btn btn-outline-primary btn-sm">
+                Clear Search & Try Sample Roll Numbers
+            </a>
+        </div>
+    </div>
+    {% else %}
+    <!-- Initial Search Prompt -->
+    <div class="card border-0 shadow-sm p-5 text-center bg-white my-4">
+        <div class="icon-box bg-primary-subtle text-primary mx-auto mb-3" style="width: 64px; height: 64px;">
+            <i data-lucide="search" style="width: 32px; height: 32px;"></i>
+        </div>
+        <h4 class="fw-bold mb-2">Search Student Academic Profile</h4>
+        <p class="text-muted small max-w-700 mx-auto mb-4">
+            Enter a student roll number or select from the quick-pick list above to inspect longitudinal GPA trajectory, multi-semester evaluation breakdown, credit completion, and backlog diagnostics.
+        </p>
+        {% if sample_students %}
+        <div class="d-flex justify-content-center flex-wrap gap-2">
+            {% for s in sample_students %}
+            <a href="?student_id={{ s.student_id }}" class="btn btn-sm btn-outline-secondary font-monospace d-inline-flex align-items-center gap-1">
+                <i data-lucide="user"></i> {{ s.student_id }}
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Clear / Update Backlog Modal -->
+    <div class="modal fade" id="clearBacklogModal" tabindex="-1" aria-labelledby="clearBacklogModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-success-subtle text-success py-3">
+                    <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="clearBacklogModalLabel">
+                        <i data-lucide="check-circle-2"></i> Update / Clear Backlog
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="clearBacklogForm" onsubmit="submitClearBacklog(event)">
+                    <div class="modal-body p-4">
+                        <div class="alert alert-light border small mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Student Roll No:</span>
+                                <span class="font-monospace fw-bold text-dark" id="modalStudentId">{{ record.student_id if record else '' }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Course Code:</span>
+                                <span class="font-monospace fw-bold text-primary" id="modalSubjectCode"></span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Course Name:</span>
+                                <span class="fw-semibold text-dark text-end" id="modalSubjectName"></span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Semester:</span>
+                                <span class="badge bg-secondary-subtle text-secondary" id="modalSemester"></span>
+                            </div>
+                        </div>
+
+                        <input type="hidden" id="clearStudentId" value="{{ record.student_id if record else '' }}">
+                        <input type="hidden" id="clearSubjectCode">
+                        <input type="hidden" id="clearSemester">
+
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <label class="form-label small fw-semibold">Cleared Grade <span class="text-danger">*</span></label>
+                                <select class="form-select" id="clearGrade" required onchange="handleGradeChange(this.value)">
+                                    <option value="" disabled>Select Grade</option>
+                                    <option value="O">O (Outstanding - 10.0)</option>
+                                    <option value="A+">A+ (Excellent - 9.0)</option>
+                                    <option value="A">A (Very Good - 8.0)</option>
+                                    <option value="B+" selected>B+ (Good - 7.0)</option>
+                                    <option value="B">B (Above Average - 6.0)</option>
+                                    <option value="C">C (Pass - 5.0)</option>
+                                    <option value="P">P (Pass - 4.0)</option>
+                                </select>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label small fw-semibold">Grade Points (GP) <span class="text-danger">*</span></label>
+                                <input type="number" step="0.1" min="4.0" max="10.0" class="form-control font-monospace" id="clearGradePoints" value="7.0" required>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label small fw-semibold">Updated Semester SGPA <span class="text-muted fw-normal">(Optional)</span></label>
+                                <input type="number" step="0.01" min="0.0" max="10.0" class="form-control font-monospace" id="clearUpdatedSgpa" placeholder="e.g. 6.45">
+                                <div class="form-text extra-small">Leave blank to maintain current SGPA.</div>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label small fw-semibold">Exam Session / Remarks</label>
+                                <input type="text" class="form-control" id="clearRemarks" placeholder="e.g. Supplementary Nov 2025" value="Cleared in Supplementary Exam">
+                            </div>
+                        </div>
+
+                        <div id="clearBacklogAlert" class="alert alert-danger small d-none mt-3 mb-0"></div>
+                        <div id="clearBacklogSuccessAlert" class="alert alert-success small d-none mt-3 mb-0"></div>
+                    </div>
+                    <div class="modal-footer bg-light py-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success btn-sm d-flex align-items-center gap-1" id="saveClearBacklogBtn">
+                            <i data-lucide="check"></i> Confirm Clearance
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if record %}
+<script>
+{% if record.progression and record.progression|length > 1 %}
+document.addEventListener("DOMContentLoaded", () => {
+    const progression = {{ record.progression|tojson }};
+    const sems = progression.map(p => `Semester ${p.semester}`);
+    const sgpas = progression.map(p => p.sgpa || 0);
+
+    const traceActual = {
+        x: sems,
+        y: sgpas,
+        type: 'scatter',
+        mode: 'lines+markers+text',
+        text: sgpas.map(v => v.toFixed(2)),
+        textposition: 'top center',
+        textfont: { family: 'Plus Jakarta Sans, sans-serif', size: 12, color: '#047857', weight: 'bold' },
+        line: { color: '#059669', width: 3, shape: 'spline' },
+        marker: { size: 10, color: '#047857', line: { color: '#ffffff', width: 2 } },
+        hovertemplate: '<b>%{x}</b><br>SGPA: <b>%{y:.2f}</b><extra></extra>',
+        name: 'Semester SGPA'
+    };
+
+    // First class threshold (6.0)
+    const traceFirstClass = {
+        x: sems,
+        y: sems.map(() => 6.0),
+        type: 'scatter',
+        mode: 'lines',
+        line: { color: '#f59e0b', width: 1.5, dash: 'dash' },
+        name: 'First Class (6.0)',
+        hoverinfo: 'none'
+    };
+
+    // Pass threshold (5.0)
+    const tracePass = {
+        x: sems,
+        y: sems.map(() => 5.0),
+        type: 'scatter',
+        mode: 'lines',
+        line: { color: '#ef4444', width: 1.5, dash: 'dot' },
+        name: 'Pass Threshold (5.0)',
+        hoverinfo: 'none'
+    };
+
+    const layout = {
+        margin: { t: 30, r: 20, l: 45, b: 40 },
+        font: { family: 'Plus Jakarta Sans, sans-serif' },
+        yaxis: { range: [3.5, 8.5], title: 'SGPA (Scale of 10.0)', gridcolor: '#f1f5f9' },
+        xaxis: { gridcolor: '#f8fafc' },
+        showlegend: false,
+        paper_bgcolor: 'transparent',
+        plot_bgcolor: 'transparent'
+    };
+
+    Plotly.newPlot('progressionChart', [traceActual, traceFirstClass, tracePass], layout, { responsive: true, displayModeBar: false });
+});
+{% endif %}
+
+// Client-side Semester Table Filter
+function filterTable(filter, btn) {
+    document.querySelectorAll('.sem-tab-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+
+    const rows = document.querySelectorAll('#coursesTable tbody tr');
+    rows.forEach(row => {
+        if (filter === 'ALL') {
+            row.style.display = '';
+        } else if (filter === 'BACKLOGS') {
+            row.style.display = (row.getAttribute('data-backlog') === 'true') ? '' : 'none';
+        } else {
+            row.style.display = (row.getAttribute('data-semester') === filter) ? '' : 'none';
+        }
+    });
+}
+
+// Toggle Privacy Masking on Roll Number
+let isMasked = false;
+const realRollNo = "{{ record.student_id }}";
+function togglePrivacyMask() {
+    const el = document.getElementById('displayRollNo');
+    if (!isMasked) {
+        if (realRollNo.length > 4) {
+            el.textContent = realRollNo.slice(0, 2) + '***' + realRollNo.slice(-2);
+        } else {
+            el.textContent = '***';
+        }
+        isMasked = true;
+    } else {
+        el.textContent = realRollNo;
+        isMasked = false;
+    }
+}
+
+// Backlog Clearance Modal Handling
+const GRADE_POINTS_MAP = {
+    'O': 10.0,
+    'A+': 9.0,
+    'A': 8.0,
+    'B+': 7.0,
+    'B': 6.0,
+    'C': 5.0,
+    'P': 4.0
+};
+
+function handleGradeChange(grade) {
+    const gpInput = document.getElementById('clearGradePoints');
+    if (GRADE_POINTS_MAP[grade] !== undefined) {
+        gpInput.value = GRADE_POINTS_MAP[grade].toFixed(1);
+    }
+}
+
+let clearModalInstance = null;
+function openClearBacklogModal(subjectCode, subjectName, semester, oldGrade) {
+    document.getElementById('modalSubjectCode').textContent = subjectCode;
+    document.getElementById('modalSubjectName').textContent = subjectName || 'Subject Course';
+    document.getElementById('modalSemester').textContent = 'Semester ' + semester;
+    document.getElementById('clearSubjectCode').value = subjectCode;
+    document.getElementById('clearSemester').value = semester;
+
+    const errAlert = document.getElementById('clearBacklogAlert');
+    const succAlert = document.getElementById('clearBacklogSuccessAlert');
+    errAlert.classList.add('d-none');
+    succAlert.classList.add('d-none');
+
+    document.getElementById('clearGrade').value = 'B+';
+    document.getElementById('clearGradePoints').value = '7.0';
+    document.getElementById('clearUpdatedSgpa').value = '';
+    document.getElementById('clearRemarks').value = 'Cleared in Supplementary Exam';
+
+    const modalEl = document.getElementById('clearBacklogModal');
+    if (!clearModalInstance) {
+        clearModalInstance = new bootstrap.Modal(modalEl);
+    }
+    clearModalInstance.show();
+    if (window.lucide) {
+        lucide.createIcons();
+    }
+}
+
+// Delegated click listener for Clear Backlog buttons
+document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.clear-backlog-btn');
+    if (btn) {
+        const code = btn.getAttribute('data-subject-code');
+        const name = btn.getAttribute('data-subject-name');
+        const sem = btn.getAttribute('data-semester');
+        const grade = btn.getAttribute('data-grade');
+        openClearBacklogModal(code, name, sem, grade);
+    }
+});
+
+async function submitClearBacklog(e) {
+    e.preventDefault();
+    const btn = document.getElementById('saveClearBacklogBtn');
+    const errAlert = document.getElementById('clearBacklogAlert');
+    const succAlert = document.getElementById('clearBacklogSuccessAlert');
+
+    errAlert.classList.add('d-none');
+    succAlert.classList.add('d-none');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Clearing...';
+
+    const payload = {
+        student_id: document.getElementById('clearStudentId').value,
+        subject_code: document.getElementById('clearSubjectCode').value,
+        semester: document.getElementById('clearSemester').value,
+        letter_grade: document.getElementById('clearGrade').value,
+        grade_points: parseFloat(document.getElementById('clearGradePoints').value),
+        updated_sgpa: document.getElementById('clearUpdatedSgpa').value ? parseFloat(document.getElementById('clearUpdatedSgpa').value) : null,
+        remarks: document.getElementById('clearRemarks').value
+    };
+
+    try {
+        const response = await fetch('{{ url_for("student_performance.clear_backlog") }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const res = await response.json();
+        if (response.ok && res.status === 'success') {
+            succAlert.textContent = res.message || 'Backlog cleared successfully! Refreshing...';
+            succAlert.classList.remove('d-none');
+            setTimeout(() => {
+                window.location.reload();
+            }, 800);
+        } else {
+            errAlert.textContent = res.message || 'Failed to clear backlog.';
+            errAlert.classList.remove('d-none');
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="check"></i> Confirm Clearance';
+            if (window.lucide) lucide.createIcons();
+        }
+    } catch (err) {
+        errAlert.textContent = 'Error submitting clearance: ' + err.message;
+        errAlert.classList.remove('d-none');
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="check"></i> Confirm Clearance';
+        if (window.lucide) lucide.createIcons();
+    }
+}
+</script>
+{% endif %}
+{% endblock %}

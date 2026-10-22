@@ -1,0 +1,423 @@
+{% extends "base.html" %}
+
+{% block title %}PySpark Batch Monitor & Benchmark — EduPulse Analytics{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+    <!-- Header Breadcrumb & Status -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="{{ url_for('core.landing') }}">Home</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">PySpark Processing Monitor</li>
+                </ol>
+            </nav>
+            <h2 class="h3 fw-bold mb-0">PySpark Distributed Processing Engine</h2>
+            <p class="text-muted small mb-0">
+                Track asynchronous batch transformation jobs, monitor distributed throughput, and generate 1,000,000+ synthetic records.
+            </p>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 d-flex align-items-center gap-2">
+                <span class="status-pulse"></span> Apache PySpark 4.2 Standalone (Local Multi-Core)
+            </span>
+        </div>
+    </div>
+
+    <!-- Architecture & Engine Purpose Explanation Banner -->
+    <div class="alert alert-info border-0 shadow-sm d-flex align-items-start gap-3 p-3 mb-4 rounded-3 bg-white border-start border-4 border-primary">
+        <div class="p-2 bg-primary-subtle text-primary rounded-circle mt-1">
+            <i data-lucide="info" style="width: 22px; height: 22px;"></i>
+        </div>
+        <div class="flex-grow-1">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-1">
+                <h6 class="fw-bold mb-0 text-dark">Why is the PySpark Monitor in EduPulse? (Distributed Big Data Engine)</h6>
+                <span class="badge bg-light text-muted border">System Tools & Benchmark Suite</span>
+            </div>
+            <p class="small text-muted mb-2">
+                EduPulse Analytics operates with a dual-engine architecture designed for both everyday classroom marksheets and high-throughput university scale:
+            </p>
+            <div class="row g-2 extra-small text-muted">
+                <div class="col-md-6">
+                    <div class="p-2 rounded bg-light border h-100">
+                        <strong class="text-primary d-block mb-1"><i data-lucide="table" style="width: 14px; height: 14px;"></i> Standard Academic Workflows (Excel & Marksheets):</strong>
+                        For regular departmental operations (100–5,000 students), multi-semester grade sheets, laboratory marks, and mid-exams, EduPulse uses the <strong>Universal In-Memory Engine</strong> (via the <a href="{{ url_for('data.import_wizard') }}" class="text-primary fw-semibold">Import Wizard</a> and <a href="{{ url_for('academic_analysis.index') }}" class="text-primary fw-semibold">Academic Analysis</a>) for instant, zero-delay results.
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-2 rounded bg-light border h-100">
+                        <strong class="text-purple d-block mb-1"><i data-lucide="cpu" style="width: 14px; height: 14px;"></i> PySpark Distributed Engine (This Monitor):</strong>
+                        This dedicated backend is used for asynchronous processing of massive datasets (<strong>10,000 to 1,000,000+ student records</strong>), multi-node parallel aggregations, and generating synthetic benchmark stress-tests. It is kept running as an enterprise service to guarantee zero latency on large institutional workloads.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Benchmark Generator & Job Trigger Row -->
+    <div class="row g-4 mb-4">
+        <!-- Synthetic Big Data Generator -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm p-4 h-100 bg-white">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="icon-box bg-primary-subtle text-primary">
+                            <i data-lucide="sparkles"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">Synthetic Big Data Generator</h5>
+                            <small class="text-muted">Generate high-volume benchmark datasets</small>
+                        </div>
+                    </div>
+                    <span class="badge bg-primary-subtle text-primary">Scale Benchmarks</span>
+                </div>
+
+                <p class="text-muted small mb-3">
+                    Streams procedural academic records directly to disk with fictional student IDs (<code>STU-2026-XXXXXX</code>), reproducible seeds, and configurable anomalies.
+                </p>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-sm-6">
+                        <label class="form-label extra-small fw-semibold text-uppercase text-muted">Benchmark Scale Tier</label>
+                        <select class="form-select form-select-sm" id="synthTierSelect">
+                            <option value="10000">10,000 Records (Tier 1)</option>
+                            <option value="100000" selected>100,000 Records (Tier 2)</option>
+                            <option value="500000">500,000 Records (Tier 3)</option>
+                            <option value="1000000">1,000,000+ Records (Tier 4 Scale)</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label extra-small fw-semibold text-uppercase text-muted">Academic Model</label>
+                        <select class="form-select form-select-sm" id="synthModelSelect">
+                            <option value="marks_based" selected>Marks-Based (Internal + External)</option>
+                            <option value="grade_based">Grade-Based (Letter Grades + SGPA)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="synthLoading" class="p-3 bg-light rounded text-center mb-3 d-none">
+                    <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
+                    <p class="extra-small text-muted mb-0">Streaming synthetic records in partitioned chunks to disk...</p>
+                </div>
+
+                <div id="synthSuccess" class="alert alert-success d-none py-2 px-3 small mb-3">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <div class="mt-auto">
+                    <button type="button" class="btn btn-primary btn-sm w-100 d-flex align-items-center justify-content-center gap-2" id="btnGenSynth" onclick="triggerSyntheticGeneration()">
+                        <i data-lucide="zap"></i> Generate Synthetic Dataset
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Launch Batch Processing Job -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm p-4 h-100 bg-white">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="icon-box bg-purple-subtle text-purple">
+                            <i data-lucide="cpu"></i>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">PySpark Pipeline Execution</h5>
+                            <small class="text-muted">Launch asynchronous distributed batch job</small>
+                        </div>
+                    </div>
+                    <span class="badge bg-purple-subtle text-purple">Non-Blocking</span>
+                </div>
+
+                <p class="text-muted small mb-3">
+                    Executes the 10-stage PySpark pipeline (windowed deduplication, range validation, aggregation, and Snappy Parquet write) in a decoupled background worker thread.
+                </p>
+
+                <div class="mb-3">
+                    <label class="form-label extra-small fw-semibold text-uppercase text-muted">Select Target Dataset to Process</label>
+                    <select class="form-select form-select-sm" id="jobTargetSelect">
+                        <option value="">-- Choose a Dataset or Synthetic File --</option>
+                        {% for m in manifests %}
+                        <option value="{{ m.storage_locations.validated_path }}" data-id="{{ m.dataset_id }}" data-model="{{ m.model_type }}">
+                            [Imported] {{ m.source_file.original_filename if (m.get('source_file') and m.source_file.original_filename) else m.dataset_id }} ({{ "{:,}".format(m.row_counts.accepted_rows) if m.get('row_counts') else 'N/A' }} rows)
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="p-3 bg-light rounded mb-3 small">
+                    <strong class="d-block text-dark mb-1">Pipeline Stages:</strong>
+                    <span class="text-muted extra-small">
+                        1. Discovery &rarr; 2. Schema Normalization &rarr; 3. Data Quality &rarr; 4. Deduplication &rarr; 5. Range Checking &rarr; 6. Cleaning &rarr; 7. Derived Calculations &rarr; 8. Aggregations &rarr; 9. Parquet &rarr; 10. Telemetry.
+                    </span>
+                </div>
+
+                <div class="mt-auto">
+                    <button type="button" class="btn btn-purple btn-sm w-100 text-white d-flex align-items-center justify-content-center gap-2" id="btnLaunchSpark" onclick="launchSparkBatchJob()">
+                        <i data-lucide="play"></i> Run PySpark Batch Pipeline
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active & Historical Batch Jobs Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3 border-light-subtle d-flex align-items-center justify-content-between">
+            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                <i data-lucide="activity" class="text-primary"></i> Background PySpark Batch Jobs
+            </h5>
+            <span class="badge bg-light text-muted border" id="jobCountBadge">{{ jobs|length }} Jobs</span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="jobsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Job ID / Dataset</th>
+                        <th>Status</th>
+                        <th style="width: 280px;">Progress</th>
+                        <th>Current Stage</th>
+                        <th>Elapsed Time</th>
+                        <th>Throughput</th>
+                    </tr>
+                </thead>
+                <tbody id="jobsBody">
+                    {% if jobs %}
+                        {% for j in jobs %}
+                        <tr id="jobRow_{{ j.job_id }}">
+                            <td class="ps-4">
+                                <span class="font-monospace fw-bold d-block text-dark">{{ j.job_id[:8] }}...</span>
+                                <small class="text-muted font-monospace">{{ j.dataset_id[:16] }}</small>
+                            </td>
+                            <td>
+                                {% if j.status == 'COMPLETED' %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">Completed</span>
+                                {% elif j.status == 'RUNNING' %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Running</span>
+                                {% elif j.status == 'FAILED' %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Failed</span>
+                                {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar {% if j.status == 'COMPLETED' %}bg-success{% elif j.status == 'FAILED' %}bg-danger{% else %}progress-bar-striped progress-bar-animated bg-primary{% endif %}"
+                                         role="progressbar" style="width: {{ j.progress_pct }}%"></div>
+                                </div>
+                                <span class="extra-small text-muted">{{ j.progress_pct }}%</span>
+                            </td>
+                            <td><span class="small">{{ j.current_stage }}</span></td>
+                            <td><span class="small text-muted">{{ j.elapsed_seconds }}s</span></td>
+                            <td>
+                                {% if j.telemetry and j.telemetry.records_per_second %}
+                                <strong class="small text-success">{{ "{:,}".format(j.telemetry.records_per_second) }}</strong> <small class="text-muted">rows/s</small>
+                                {% else %}
+                                <span class="text-muted extra-small">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr id="noJobsRow">
+                            <td colspan="6" class="text-center py-4 text-muted">
+                                No batch jobs executed yet. Launch a pipeline run using the options above.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.btn-purple {
+    background-color: var(--color-purple);
+    border-color: var(--color-purple);
+}
+.btn-purple:hover {
+    background-color: #6d28d9;
+    border-color: #6d28d9;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let activeJobId = null;
+let pollInterval = null;
+
+function triggerSyntheticGeneration() {
+    const btn = document.getElementById("btnGenSynth");
+    const loading = document.getElementById("synthLoading");
+    const success = document.getElementById("synthSuccess");
+
+    btn.disabled = true;
+    loading.classList.remove("d-none");
+    success.classList.add("d-none");
+
+    const recordCount = parseInt(document.getElementById("synthTierSelect").value);
+    const modelType = document.getElementById("synthModelSelect").value;
+
+    fetch("/processing-monitor/api/generate-synthetic", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ record_count: recordCount, model_type: modelType, seed: 42 })
+    })
+    .then(res => res.json())
+    .then(data => {
+        btn.disabled = false;
+        loading.classList.add("d-none");
+        if (data.status === "success") {
+            const r = data.result;
+            success.innerHTML = `
+                <strong>Generated ${r.total_records.toLocaleString()} records in ${r.elapsed_seconds}s</strong> (${r.records_per_second.toLocaleString()} rows/s, ${r.file_size_mb} MB).<br>
+                Saved as: <code class="extra-small">${r.filename}</code>
+            `;
+            success.classList.remove("d-none");
+
+            // Add to dataset select option
+            const select = document.getElementById("jobTargetSelect");
+            const opt = document.createElement("option");
+            opt.value = r.file_path;
+            opt.dataset.id = `SYNTH_${r.total_records}`;
+            opt.dataset.model = r.model_type;
+            opt.textContent = `[Synthetic] ${r.filename} (${r.total_records.toLocaleString()} rows)`;
+            opt.selected = true;
+            select.appendChild(opt);
+        } else {
+            alert("Generation failed: " + data.error);
+        }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        loading.classList.add("d-none");
+        alert("Generation request error: " + err);
+    });
+}
+
+function launchSparkBatchJob() {
+    const select = document.getElementById("jobTargetSelect");
+    const filePath = select.value;
+    if (!filePath) {
+        alert("Please select a dataset or generate a synthetic file first.");
+        return;
+    }
+
+    const selectedOpt = select.options[select.selectedIndex];
+    const datasetId = selectedOpt.dataset.id;
+    const modelType = selectedOpt.dataset.model || "marks_based";
+
+    const btn = document.getElementById("btnLaunchSpark");
+    btn.disabled = true;
+
+    fetch("/processing-monitor/api/launch-spark-job", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dataset_id: datasetId, file_path: filePath, model_type: modelType })
+    })
+    .then(res => res.json())
+    .then(data => {
+        btn.disabled = false;
+        if (data.status === "success") {
+            activeJobId = data.job_id;
+            prependJobRow(data.job_id, datasetId);
+            startPollingJob(data.job_id);
+        } else {
+            alert("Failed to enqueue job: " + data.error);
+        }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        alert("Job launch error: " + err);
+    });
+}
+
+function prependJobRow(jobId, datasetId) {
+    const tbody = document.getElementById("jobsBody");
+    const noJobs = document.getElementById("noJobsRow");
+    if (noJobs) noJobs.remove();
+
+    const tr = document.createElement("tr");
+    tr.id = `jobRow_${jobId}`;
+    tr.innerHTML = `
+        <td class="ps-4">
+            <span class="font-monospace fw-bold d-block text-dark">${jobId.slice(0, 8)}...</span>
+            <small class="text-muted font-monospace">${datasetId.slice(0, 16)}</small>
+        </td>
+        <td><span class="badge bg-primary-subtle text-primary border border-primary-subtle">Queued</span></td>
+        <td>
+            <div class="progress" style="height: 8px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 5%"></div>
+            </div>
+            <span class="extra-small text-muted">5%</span>
+        </td>
+        <td><span class="small">Queued</span></td>
+        <td><span class="small text-muted">0s</span></td>
+        <td><span class="text-muted extra-small">-</span></td>
+    `;
+    tbody.prepend(tr);
+}
+
+function startPollingJob(jobId) {
+    if (pollInterval) clearInterval(pollInterval);
+
+    pollInterval = setInterval(() => {
+        fetch(`/processing-monitor/api/job/${jobId}/status`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "success") {
+                    updateJobRow(data.job);
+                    if (data.job.status === "COMPLETED" || data.job.status === "FAILED") {
+                        clearInterval(pollInterval);
+                    }
+                }
+            })
+            .catch(() => clearInterval(pollInterval));
+    }, 1500);
+}
+
+function updateJobRow(job) {
+    const tr = document.getElementById(`jobRow_${job.job_id}`);
+    if (!tr) return;
+
+    let statusBadge = `<span class="badge bg-secondary">Pending</span>`;
+    let barColor = "bg-primary progress-bar-striped progress-bar-animated";
+
+    if (job.status === "COMPLETED") {
+        statusBadge = `<span class="badge bg-success-subtle text-success border border-success-subtle">Completed</span>`;
+        barColor = "bg-success";
+    } else if (job.status === "FAILED") {
+        statusBadge = `<span class="badge bg-danger-subtle text-danger border border-danger-subtle">Failed</span>`;
+        barColor = "bg-danger";
+    } else if (job.status === "RUNNING") {
+        statusBadge = `<span class="badge bg-primary-subtle text-primary border border-primary-subtle">Running</span>`;
+    }
+
+    const t = job.telemetry || {};
+    const throughput = t.records_per_second ? `<strong class="small text-success">${t.records_per_second.toLocaleString()}</strong> <small class="text-muted">rows/s</small>` : `-`;
+
+    tr.innerHTML = `
+        <td class="ps-4">
+            <span class="font-monospace fw-bold d-block text-dark">${job.job_id.slice(0, 8)}...</span>
+            <small class="text-muted font-monospace">${job.dataset_id.slice(0, 16)}</small>
+        </td>
+        <td>${statusBadge}</td>
+        <td>
+            <div class="progress" style="height: 8px;">
+                <div class="progress-bar ${barColor}" role="progressbar" style="width: ${job.progress_pct}%"></div>
+            </div>
+            <span class="extra-small text-muted">${job.progress_pct}%</span>
+        </td>
+        <td><span class="small">${job.current_stage}</span></td>
+        <td><span class="small text-muted">${job.elapsed_seconds}s</span></td>
+        <td>${throughput}</td>
+    `;
+}
+</script>
+{% endblock %}

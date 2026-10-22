@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+
+{% block title %}Academic Analysis — EduPulse Analytics{% endblock %}
+
+{% block extra_css %}
+<!-- Plotly.js CDN -->
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+    <!-- Header & Filter Bar -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="{{ url_for('core.landing') }}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Academic Analysis</li>
+                </ol>
+            </nav>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <h2 class="h3 fw-bold mb-0">Cross-Sectional Academic Analysis</h2>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle extra-small">
+                    <i data-lucide="layers" style="width: 12px; height: 12px;" class="me-1"></i> {{ active_project.name if active_project else 'Batch 2023 - 2027' }}
+                </span>
+            </div>
+            <p class="text-muted small mb-0">
+                Departmental drill-downs, theory vs laboratory course analysis, and transparent student support indicators.
+            </p>
+        </div>
+
+        <form method="GET" class="d-flex flex-wrap align-items-center gap-2">
+            <!-- Dataset Selector -->
+            <select class="form-select form-select-sm shadow-sm" name="dataset_id" style="min-width: 260px;" onchange="this.form.submit()">
+                <option value="ALL" {% if selected_id == 'ALL' %}selected{% endif %}>
+                    All Uploaded Semesters (Cohort Overview)
+                </option>
+                {% for m in manifests %}
+                <option value="{{ m.dataset_id }}" {% if m.dataset_id == selected_id %}selected{% endif %}>
+                    {{ (m.source_file and m.source_file.original_filename) if m.get('source_file') else m.dataset_id }} {% if m.detected_semester %}(Sem {{ m.detected_semester }}){% endif %}
+                </option>
+                {% endfor %}
+            </select>
+
+            <!-- Assessment / Course Type Filter (Separates Theory vs Labs) -->
+            <select class="form-select form-select-sm shadow-sm" name="assessment_type" onchange="this.form.submit()">
+                <option value="ALL" {% if asmt_filter == 'ALL' %}selected{% endif %}>All Evaluations (Theory + Lab)</option>
+                <option value="THEORY" {% if asmt_filter == 'THEORY' %}selected{% endif %}>Theory Courses Only</option>
+                <option value="LABORATORY" {% if asmt_filter == 'LABORATORY' %}selected{% endif %}>Laboratory / Practicals Only</option>
+                <option value="SEMESTER_EXAM" {% if asmt_filter == 'SEMESTER_EXAM' %}selected{% endif %}>Semester Final Results</option>
+                <option value="INTERNAL" {% if asmt_filter == 'INTERNAL' %}selected{% endif %}>Internal / Mid Assessments</option>
+            </select>
+
+            <!-- Department Filter -->
+            <select class="form-select form-select-sm shadow-sm" name="department" onchange="this.form.submit()">
+                <option value="ALL" {% if dept_filter == 'ALL' %}selected{% endif %}>All Departments</option>
+                {% for d in departments %}
+                <option value="{{ d }}" {% if dept_filter == d %}selected{% endif %}>{{ d }}</option>
+                {% endfor %}
+            </select>
+
+            <!-- Semester Filter -->
+            <select class="form-select form-select-sm shadow-sm" name="semester" onchange="this.form.submit()">
+                <option value="0" {% if sem_filter == 0 %}selected{% endif %}>All Semesters</option>
+                {% for sem in available_semesters %}
+                <option value="{{ sem }}" {% if sem_filter == sem %}selected{% endif %}>Semester {{ sem }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+
+    {% if analytics and analytics.subjects %}
+    <!-- Chart: Subject Difficulty Ranking -->
+    <div class="card border-0 shadow-sm p-4 bg-white mb-4">
+        <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+            <i data-lucide="trending-up" class="text-primary"></i> Subject Performance Distribution & Difficulty
+        </h5>
+        <div id="difficultyChart" style="height: 320px;"></div>
+    </div>
+
+    <!-- Subject Drill-Down Table -->
+    <div class="card border-0 shadow-sm bg-white mb-4">
+        <div class="card-header bg-white py-3 border-light-subtle">
+            <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                <i data-lucide="layers" class="text-primary"></i> Detailed Subject Metrics
+            </h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Code</th>
+                        <th>Subject Name</th>
+                        <th>Enrolled</th>
+                        <th>Passed</th>
+                        <th>Failed</th>
+                        <th>Absent</th>
+                        <th>Pass Rate</th>
+                        {% if analytics.model_type == 'marks_based' %}
+                        <th>Average Score</th>
+                        <th>Median</th>
+                        <th>Std Dev</th>
+                        <th>Difficulty Index</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sub in analytics.subjects %}
+                    <tr>
+                        <td class="ps-4 font-monospace fw-bold text-primary">{{ sub.subject_code }}</td>
+                        <td>{{ sub.subject_name }}</td>
+                        <td>{{ sub.total_students }}</td>
+                        <td><span class="badge bg-success-subtle text-success">{{ sub.passed }}</span></td>
+                        <td><span class="badge bg-danger-subtle text-danger">{{ sub.failed }}</span></td>
+                        <td><span class="badge bg-warning-subtle text-warning">{{ sub.absent }}</span></td>
+                        <td>
+                            <strong class="{% if sub.pass_rate >= 75 %}text-success{% elif sub.pass_rate >= 50 %}text-warning{% else %}text-danger{% endif %}">
+                                {{ sub.pass_rate }}%
+                            </strong>
+                        </td>
+                        {% if analytics.model_type == 'marks_based' %}
+                        <td>{{ sub.average_marks }}</td>
+                        <td>{{ sub.median_marks }}</td>
+                        <td>&plusmn;{{ sub.std_dev }}</td>
+                        <td>
+                            <span class="badge {% if sub.difficulty_index >= 0.4 %}bg-danger-subtle text-danger{% else %}bg-light text-muted border{% endif %}">
+                                {{ sub.difficulty_index }}
+                            </span>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Transparent Student Support Indicators -->
+    <div class="card border-0 shadow-sm bg-white mb-4">
+        <div class="card-header bg-white py-3 border-light-subtle d-flex align-items-center justify-content-between">
+            <div>
+                <h5 class="mb-0 fw-bold d-flex align-items-center gap-2 text-dark">
+                    <i data-lucide="shield-alert" class="text-warning"></i> Rule-Based Student Support Indicators
+                </h5>
+                <small class="text-muted extra-small">
+                    Transparent rule triggers for academic review. These flags reflect configured criteria and are not clinical or diagnostic evaluations.
+                </small>
+            </div>
+            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                {{ analytics.support_indicators|length if analytics.support_indicators else 0 }} Flags
+            </span>
+        </div>
+
+        {% if analytics.support_indicators %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Student ID (Masked)</th>
+                        <th>Department</th>
+                        <th>Semester</th>
+                        <th>Alert Type</th>
+                        <th>Severity</th>
+                        <th>Transparent Trigger Reason</th>
+                        <th>Recommended Action</th>
+                        <th class="text-end pe-4">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for flag in analytics.support_indicators[:30] %}
+                    <tr>
+                        <td class="ps-4 font-monospace">
+                            {{ flag.student_id[:2] }}***{{ flag.student_id[-2:] }}
+                        </td>
+                        <td>{{ flag.department }}</td>
+                        <td>Sem {{ flag.semester }}</td>
+                        <td><code>{{ flag.flag_type }}</code></td>
+                        <td>
+                            {% if flag.severity == 'HIGH' %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">High Priority</span>
+                            {% else %}
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Medium</span>
+                            {% endif %}
+                        </td>
+                        <td><small>{{ flag.reason }}</small></td>
+                        <td><small class="text-muted">{{ flag.action_recommended }}</small></td>
+                        <td class="text-end pe-4">
+                            <a href="{{ url_for('student_performance.index', student_id=flag.student_id) }}" class="btn btn-outline-primary btn-sm">
+                                View Profile
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="card-body text-center py-4 text-muted">
+            <i data-lucide="check-circle" class="text-success mx-auto mb-2" style="width: 32px; height: 32px;"></i>
+            <p class="mb-0">No academic support indicators triggered for the selected filters.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    {% else %}
+    <div class="card border-0 shadow-sm p-5 text-center bg-white my-4">
+        <div class="icon-box bg-light-subtle text-muted mx-auto mb-3" style="width: 64px; height: 64px;">
+            <i data-lucide="filter" style="width: 32px; height: 32px;"></i>
+        </div>
+        <h5 class="fw-bold mb-2">No Subject Records Found</h5>
+        <p class="text-muted small max-w-700 mx-auto mb-3">
+            No course records matched the selected combination (Dataset: <strong>{{ selected_id }}</strong>, Department: <strong>{{ dept_filter }}</strong>, Semester: <strong>{{ sem_filter }}</strong>).
+        </p>
+        <div>
+            <a href="{{ url_for('academic_analysis.index', dataset_id='ALL', department='ALL', semester=0) }}" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1 shadow-sm">
+                <i data-lucide="rotate-ccw"></i> View All Semesters Across Institution
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if analytics and analytics.subjects %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const subjects = {{ analytics.subjects|tojson }};
+    const subNames = subjects.map(s => s.subject_name || s.subject_code);
+    const subCodes = subjects.map(s => s.subject_code);
+    const passRates = subjects.map(s => s.pass_rate);
+
+    const trace = {
+        x: subNames,
+        y: passRates,
+        customdata: subCodes,
+        type: 'scatter',
+        mode: 'lines+markers',
+        line: { color: '#2563eb', width: 3, shape: 'spline' },
+        marker: { size: 8, color: '#1d4ed8' },
+        hovertemplate: '<b>%{x}</b><br>Course Code: <code>%{customdata}</code><br>Pass Rate: <b>%{y:.2f}%</b><extra></extra>',
+        name: 'Pass Rate (%)'
+    };
+
+    const layout = {
+        margin: { t: 20, r: 20, l: 40, b: 60 },
+        font: { family: 'Plus Jakarta Sans, sans-serif' },
+        yaxis: { range: [0, 105], title: 'Pass Rate (%)' },
+        xaxis: { tickangle: -30 }
+    };
+    Plotly.newPlot('difficultyChart', [trace], layout, { responsive: true, displayModeBar: false });
+});
+</script>
+{% endif %}
+{% endblock %}

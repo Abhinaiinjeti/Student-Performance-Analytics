@@ -1,0 +1,86 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Logs
+logs/*.log
+*.log
+
+# EduPulse Data directories (preserve directory structure with .gitkeep, ignore generated datasets)
+data/raw/*
+!data/raw/.gitkeep
+data/validated/*
+!data/validated/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+data/analytics/*
+!data/analytics/.gitkeep
+data/manifests/*
+!data/manifests/.gitkeep
+data/jobs/*
+!data/jobs/.gitkeep
+data/drafts/*
+!data/drafts/.gitkeep
+data/reports/*
+!data/reports/.gitkeep
+data/synthetic/*
+!data/synthetic/.gitkeep
+data/temp/*
+!data/temp/.gitkeep
+
+# Local data & state (preserve FERPA/privacy)
+data/*.json
+scratch/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# PySpark scratch & metastore
+metastore_db/
+derby.log
+spark-warehouse/
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# AWS credentials
+.aws/
+credentials

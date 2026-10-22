@@ -1,0 +1,524 @@
+{% extends "base.html" %}
+
+{% block title %}EduPulse Analytics — Academic Big Data Platform{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section py-5 py-lg-6 position-relative overflow-hidden">
+    <div class="hero-bg-glow"></div>
+    <div class="container px-lg-4 position-relative">
+        <div class="row align-items-center gy-5">
+            <div class="col-lg-7">
+                <div class="badge badge-hero mb-3 d-inline-flex align-items-center gap-2">
+                    <span class="badge-dot"></span>
+                    <span id="rotatingBadge">Apache PySpark Big Data Engine (1,000,000+ Records)</span>
+                </div>
+                
+                <h1 class="hero-title display-4 fw-extrabold mb-3">
+                    Institutional Intelligence for <span class="text-gradient">Academic Excellence</span>
+                </h1>
+                
+                <p class="hero-lead text-secondary mb-4">
+                    EduPulse Analytics empowers colleges and universities to process, validate, and analyze high-volume academic records. Purpose-built for <strong>both Marks-Based</strong> internal evaluations and <strong>University Grade-Based</strong> result sheets with true distributed PySpark pipelines.
+                </p>
+
+                <div class="d-flex flex-wrap align-items-center gap-3 mb-4">
+                    <a href="#batches" class="btn btn-primary btn-lg shadow-sm d-flex align-items-center gap-2">
+                        <i data-lucide="layers"></i> Academic Batch Projects
+                    </a>
+                    <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline-primary btn-lg shadow-sm d-flex align-items-center gap-2">
+                        <i data-lucide="layout-dashboard"></i> Batch Dashboard
+                    </a>
+                    <a href="{{ url_for('data.import_wizard') }}" class="btn btn-outline-secondary btn-lg d-flex align-items-center gap-2">
+                        <i data-lucide="upload"></i> Ingest Marksheet
+                    </a>
+                </div>
+
+                <div class="hero-stats d-flex flex-wrap gap-4 pt-3 border-top border-light-subtle">
+                    <div>
+                        <div class="hero-stat-value">1M+</div>
+                        <div class="hero-stat-label">Records Scalability</div>
+                    </div>
+                    <div>
+                        <div class="hero-stat-value">100%</div>
+                        <div class="hero-stat-label">Local-First Privacy</div>
+                    </div>
+                    <div>
+                        <div class="hero-stat-value">Snappy</div>
+                        <div class="hero-stat-label">Columnar Parquet</div>
+                    </div>
+                    <div>
+                        <div class="hero-stat-value">Zero</div>
+                        <div class="hero-stat-label">Mandatory Cloud Dependencies</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hero Floating Visual Cards -->
+            <div class="col-lg-5">
+                <div class="hero-card-stack position-relative">
+                    <!-- Main Card -->
+                    <div class="card card-hero-primary shadow-lg border-0 p-4 mb-3">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="icon-bubble bg-primary-subtle text-primary">
+                                    <i data-lucide="bar-chart-3"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-bold">Live PySpark Pipeline</h6>
+                                    <small class="text-muted">Distributed batch aggregation</small>
+                                </div>
+                            </div>
+                            <span class="badge bg-success-subtle text-success">Healthy</span>
+                        </div>
+                        <div class="progress mb-2" style="height: 6px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <div class="d-flex justify-content-between extra-small text-muted mb-3">
+                            <span>Stage: Columnar Parquet Output</span>
+                            <span class="text-success fw-bold">1,000,000 / 1,000,000</span>
+                        </div>
+                        <div class="row g-2 text-center">
+                            <div class="col-4">
+                                <div class="p-2 rounded bg-light-subtle border">
+                                    <small class="text-muted d-block">Pass Rate</small>
+                                    <strong class="text-success">84.2%</strong>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 rounded bg-light-subtle border">
+                                    <small class="text-muted d-block">Avg Score</small>
+                                    <strong>71.4</strong>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 rounded bg-light-subtle border">
+                                    <small class="text-muted d-block">Absent</small>
+                                    <strong class="text-warning">1.2%</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Floating Badge Card: Privacy -->
+                    <div class="card card-floating card-floating-top shadow-sm border-0 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="icon-bubble bg-success-subtle text-success">
+                                <i data-lucide="lock"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 fw-bold small">Zero PII Leakage</h6>
+                                <span class="extra-small text-muted">Masked IDs & Local Storage</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Floating Badge Card: Speed -->
+                    <div class="card card-floating card-floating-bottom shadow-sm border-0 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="icon-bubble bg-warning-subtle text-warning">
+                                <i data-lucide="zap"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 fw-bold small">&lt; 500ms Dashboard</h6>
+                                <span class="extra-small text-muted">Pre-aggregated metadata queries</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Academic Batch Projects & Cohort Workspaces Section -->
+<section id="batches" class="py-5 bg-white border-top border-light-subtle">
+    <div class="container px-lg-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Academic Batches & Workspaces</span>
+                    <span class="badge bg-success-subtle text-success">Live Cohort Scoping</span>
+                </div>
+                <h3 class="fw-bold mb-0">Cohort Projects (e.g. 2023 - 2027 Batch)</h3>
+                <p class="text-muted small mb-0">
+                    Group multi-semester results, internal mid marks, and laboratories into distinct institutional cohorts without mixing datasets.
+                </p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-outline-secondary d-flex align-items-center gap-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#manageProjectsModal">
+                    <i data-lucide="folder-cog"></i> Manage Batches
+                </button>
+                <button type="button" class="btn btn-primary d-flex align-items-center gap-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#createProjectModal">
+                    <i data-lucide="plus-circle"></i> Create New Batch Project
+                </button>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            {% for p in all_projects %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 border {% if active_project and p.project_id == active_project.project_id %}border-primary shadow-sm ring-1 ring-primary{% else %}border-light-subtle shadow-xs{% endif %} p-4 bg-white position-relative">
+                    {% if active_project and p.project_id == active_project.project_id %}
+                    <span class="position-absolute top-0 end-0 translate-middle-y me-3 badge bg-primary text-white shadow-xs">
+                        <i data-lucide="check" class="badge-icon me-1"></i> Active Batch Workspace
+                    </span>
+                    {% endif %}
+
+                    <div class="d-flex align-items-start justify-content-between mb-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="icon-box {% if active_project and p.project_id == active_project.project_id %}bg-primary text-white{% else %}bg-light-subtle text-primary{% endif %} rounded">
+                                <i data-lucide="graduation-cap"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-bold mb-0 text-dark">{{ p.name }}</h5>
+                                <span class="badge bg-light text-secondary border extra-small mt-1">
+                                    {{ p.degree }} · {{ p.department_code }} · {{ p.regulation }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="text-muted small mb-3" style="min-height: 40px;">
+                        {{ p.description or 'Longitudinal multi-semester academic cohort and performance workspace.' }}
+                    </p>
+
+                    <div class="row g-2 text-center mb-3">
+                        <div class="col-4">
+                            <div class="p-2 bg-light-subtle rounded border border-light-subtle">
+                                <small class="text-muted extra-small d-block">Span</small>
+                                <strong class="small">{{ p.batch }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-2 bg-light-subtle rounded border border-light-subtle">
+                                <small class="text-muted extra-small d-block">Datasets</small>
+                                <strong class="small text-primary">{{ p.dataset_count }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-2 bg-light-subtle rounded border border-light-subtle">
+                                <small class="text-muted extra-small d-block">Semesters</small>
+                                <strong class="small text-success">{{ p.semesters_count }} Sem</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2 mt-auto pt-2 border-top border-light-subtle">
+                        {% if active_project and p.project_id == active_project.project_id %}
+                        <a href="{{ url_for('dashboard.index') }}" class="btn btn-sm btn-primary flex-grow-1 d-flex align-items-center justify-content-center gap-1">
+                            <i data-lucide="layout-dashboard"></i> Open Dashboard
+                        </a>
+                        {% else %}
+                        <button type="button" class="btn btn-sm btn-outline-primary flex-grow-1 d-flex align-items-center justify-content-center gap-1" onclick="switchBatchProject('{{ p.project_id }}')">
+                            <i data-lucide="arrow-right-circle"></i> Switch to this Batch
+                        </button>
+                        {% endif %}
+                        <a href="{{ url_for('data.catalog') }}" class="btn btn-sm btn-outline-secondary" title="Import files to this batch">
+                            <i data-lucide="upload"></i>
+                        </a>
+                        <button type="button" class="btn btn-sm btn-outline-danger" title="Remove / Delete Batch Project" onclick="confirmDeleteBatchProject('{{ p.project_id }}', '{{ p.name|e }}')">
+                            <i data-lucide="trash-2"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+            {% if not all_projects %}
+            <div class="col-md-6 col-lg-8">
+                <div class="card h-100 border border-light-subtle shadow-xs p-4 bg-white d-flex flex-column align-items-center justify-content-center text-center">
+                    <div class="icon-box bg-light-subtle text-muted rounded-circle mb-3 mx-auto" style="width: 52px; height: 52px;">
+                        <i data-lucide="layers" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <h6 class="fw-bold mb-1 text-dark">No Batch Projects Currently Registered</h6>
+                    <p class="text-muted small mb-3" style="max-width: 480px;">
+                        All batches were removed. You can create a new cohort workspace (such as <em>2023 - 2027 Batch</em> or <em>2024 - 2028 Batch</em>) anytime to organize marksheets.
+                    </p>
+                    <button type="button" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#createProjectModal">
+                        <i data-lucide="plus-circle" style="width: 14px; height: 14px;"></i> Create First Batch Project
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Add New Batch Card -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 border border-dashed border-2 p-4 text-center d-flex flex-column align-items-center justify-content-center bg-light-subtle" style="min-height: 250px; cursor: pointer;" data-bs-toggle="modal" data-bs-target="#createProjectModal">
+                    <div class="icon-box bg-white text-muted shadow-xs rounded-circle mb-3 mx-auto" style="width: 52px; height: 52px;">
+                        <i data-lucide="plus" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <h6 class="fw-bold mb-1">Create New Batch Project</h6>
+                    <p class="text-muted extra-small mb-3 max-w-700">
+                        Create another batch (e.g. 2024 - 2028 Batch or 2022 - 2026 Batch) to ingest separate year marksheets without mixing.
+                    </p>
+                    <button type="button" class="btn btn-sm btn-outline-primary">
+                        + Add Cohort Project
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Dual Academic Data Models Section -->
+<section id="models" class="py-5 bg-light-subtle border-top border-bottom border-light-subtle">
+    <div class="container px-lg-4">
+        <div class="text-center max-w-700 mx-auto mb-5">
+            <span class="badge bg-primary-subtle text-primary mb-2">Core Analytical Architecture</span>
+            <h2 class="section-title fw-bold">Two Distinct Academic Data Models</h2>
+            <p class="text-muted">
+                EduPulse never conflates letter grades with raw marks. We preserve authentic academic semantics across institutional paradigms.
+            </p>
+        </div>
+
+        <div class="row g-4">
+            <!-- Model A: Marks-Based -->
+            <div class="col-lg-6">
+                <div class="card h-100 border-0 shadow-sm p-4 card-feature">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="icon-box bg-primary-subtle text-primary">
+                            <i data-lucide="award"></i>
+                        </div>
+                        <div>
+                            <span class="badge bg-primary mb-1">Model A</span>
+                            <h4 class="mb-0 fw-bold">Continuous Marks-Based Results</h4>
+                        </div>
+                    </div>
+                    <p class="text-muted mb-3">
+                        Designed for autonomous colleges and internal assessments featuring modular evaluation components:
+                    </p>
+                    <ul class="list-unstyled feature-checklist mb-4">
+                        <li><i data-lucide="check" class="text-success me-2"></i> Internal Marks + External Theory Exam components</li>
+                        <li><i data-lucide="check" class="text-success me-2"></i> Per-subject configurable maximum & passing cutoffs</li>
+                        <li><i data-lucide="check" class="text-success me-2"></i> Explicit non-numeric states: <code>PASS</code>, <code>FAIL</code>, <code>ABSENT</code>, <code>WITHHELD</code></li>
+                        <li><i data-lucide="check" class="text-success me-2"></i> Interactive Class Marks spreadsheet entry with draft persistence</li>
+                        <li><i data-lucide="check" class="text-success me-2"></i> Standard deviation, median, and difficulty index analytics</li>
+                    </ul>
+                    <div class="mt-auto pt-3 border-top">
+                        <small class="text-muted">Primary formats: <strong>Spreadsheet Matrix, CSV, Direct Entry</strong></small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Model B: Grade-Based -->
+            <div class="col-lg-6">
+                <div class="card h-100 border-0 shadow-sm p-4 card-feature">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="icon-box bg-purple-subtle text-purple">
+                            <i data-lucide="graduation-cap"></i>
+                        </div>
+                        <div>
+                            <span class="badge bg-purple mb-1">Model B</span>
+                            <h4 class="mb-0 fw-bold">University Grade-Based Results</h4>
+                        </div>
+                    </div>
+                    <p class="text-muted mb-3">
+                        Engineered for university result sheets with categorical letter grades and SGPA metrics:
+                    </p>
+                    <ul class="list-unstyled feature-checklist mb-4">
+                        <li><i data-lucide="check" class="text-purple me-2"></i> Discrete Letter Grades: <code>O, A+, A, B+, B, C, P, F</code></li>
+                        <li><i data-lucide="check" class="text-purple me-2"></i> Preserves official SGPA as an authoritative institutional metric</li>
+                        <li><i data-lucide="check" class="text-purple me-2"></i> Distinct status preservation: <code>Ab</code> (Absent) vs Blank vs Failed</li>
+                        <li><i data-lucide="check" class="text-purple me-2"></i> Strict guardrail: No unapproved numeric conversion of grades</li>
+                        <li><i data-lucide="check" class="text-purple me-2"></i> Grade frequency distribution curves & pass ratios</li>
+                    </ul>
+                    <div class="mt-auto pt-3 border-top">
+                        <small class="text-muted">Primary formats: <strong>University Tabular Sheets, Multi-Sheet XLSX</strong></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 11-Stage Workflow Overview -->
+<section id="workflow" class="py-5">
+    <div class="container px-lg-4">
+        <div class="text-center max-w-700 mx-auto mb-5">
+            <span class="badge bg-success-subtle text-success mb-2">Safe & Auditable Ingestion</span>
+            <h2 class="section-title fw-bold">The 11-Stage Guided Import Workflow</h2>
+            <p class="text-muted">
+                Untrusted spreadsheets are handled with surgical safety, comprehensive preview validation, formula injection defenses, and immutable cryptographic manifests.
+            </p>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-4 col-lg-3">
+                <div class="step-card p-3 rounded border bg-white h-100">
+                    <span class="step-num">01</span>
+                    <h6 class="fw-bold mb-1">Secure Upload</h6>
+                    <small class="text-muted">MIME & 50MB extension verification.</small>
+                </div>
+            </div>
+            <div class="col-md-4 col-lg-3">
+                <div class="step-card p-3 rounded border bg-white h-100">
+                    <span class="step-num">02</span>
+                    <h6 class="fw-bold mb-1">Format Auto-Detect</h6>
+                    <small class="text-muted">Marks vs Grade heuristics with override.</small>
+                </div>
+            </div>
+            <div class="col-md-4 col-lg-3">
+                <div class="step-card p-3 rounded border bg-white h-100">
+                    <span class="step-num">03</span>
+                    <h6 class="fw-bold mb-1">Header Discovery</h6>
+                    <small class="text-muted">Multi-line institutional header scan.</small>
+                </div>
+            </div>
+            <div class="col-md-4 col-lg-3">
+                <div class="step-card p-3 rounded border bg-white h-100">
+                    <span class="step-num">04</span>
+                    <h6 class="fw-bold mb-1">Column Candidate Match</h6>
+                    <small class="text-muted">Fuzzy mapping for IDs and subjects.</small>
+                </div>
+            </div>
+            <div class="col-md-4 col-lg-3">
+                <div class="step-card p-3 rounded border bg-white h-100">
+                    <span class="step-num">05</span>
+                    <h6 class="fw-bold mb-1">User Mapping Review</h6>
+                    <small class="text-muted">Visual confirmation of mapped fields.</small>
+                </div>
+            </div>
+            <div class="col-md-4 col-lg-3">
+                <div class="step-card p-3 rounded border bg-white h-100">
+                    <span class="step-num">06</span>
+                    <h6 class="fw-bold mb-1">Live Mapped Preview</h6>
+                    <small class="text-muted">Sample inspection before persistence.</small>
+                </div>
+            </div>
+            <div class="col-md-4 col-lg-3">
+                <div class="step-card p-3 rounded border bg-white h-100">
+                    <span class="step-num">07</span>
+                    <h6 class="fw-bold mb-1">Row Validation Rules</h6>
+                    <small class="text-muted">Range checks, duplicate keys & nulls.</small>
+                </div>
+            </div>
+            <div class="col-md-4 col-lg-3">
+                <div class="step-card p-3 rounded border bg-white h-100">
+                    <span class="step-num">08</span>
+                    <h6 class="fw-bold mb-1">Validation Tally</h6>
+                    <small class="text-muted">Accepted, rejected, duplicate counts.</small>
+                </div>
+            </div>
+            <div class="col-md-4 col-lg-3">
+                <div class="step-card p-3 rounded border bg-white h-100">
+                    <span class="step-num">09</span>
+                    <h6 class="fw-bold mb-1">Confirmation Gate</h6>
+                    <small class="text-muted">Explicit user commit modal.</small>
+                </div>
+            </div>
+            <div class="col-md-4 col-lg-3">
+                <div class="step-card p-3 rounded border bg-white h-100">
+                    <span class="step-num">10</span>
+                    <h6 class="fw-bold mb-1">Segregated Storage</h6>
+                    <small class="text-muted">Untouched raw + normalized tabular.</small>
+                </div>
+            </div>
+            <div class="col-md-4 col-lg-3">
+                <div class="step-card p-3 rounded border bg-white h-100">
+                    <span class="step-num">11</span>
+                    <h6 class="fw-bold mb-1">Cryptographic Manifest</h6>
+                    <small class="text-muted">SHA-256 signed audit manifest.</small>
+                </div>
+            </div>
+            <div class="col-md-4 col-lg-3">
+                <div class="step-card p-3 rounded border bg-primary text-white h-100">
+                    <span class="step-num text-white-50">DONE</span>
+                    <h6 class="fw-bold mb-1 text-white">Spark Ready</h6>
+                    <small class="text-white-50">Ready for 1M+ distributed analytics.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- System Architecture & Technology Stack -->
+<section id="architecture" class="py-5 bg-light-subtle border-top border-light-subtle">
+    <div class="container px-lg-4">
+        <div class="row align-items-center gy-4">
+            <div class="col-lg-6">
+                <span class="badge bg-info-subtle text-info mb-2">Technical Foundations</span>
+                <h2 class="section-title fw-bold mb-3">Enterprise Big Data Architecture Without Enterprise Complexity</h2>
+                <p class="text-muted mb-4">
+                    EduPulse Analytics combines the simplicity of a local web application with the immense power of <strong>Apache PySpark</strong>. Heavy transformations are completely decoupled from web requests, providing sub-second responsiveness even under million-record workloads.
+                </p>
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-start gap-2">
+                            <i data-lucide="cpu" class="text-primary mt-1"></i>
+                            <div>
+                                <strong class="d-block">Apache PySpark</strong>
+                                <small class="text-muted">Distributed DataFrames & Snappy Parquet</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-start gap-2">
+                            <i data-lucide="box" class="text-success mt-1"></i>
+                            <div>
+                                <strong class="d-block">Flask Microframework</strong>
+                                <small class="text-muted">Modular blueprints & Jinja2 templates</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-start gap-2">
+                            <i data-lucide="pie-chart" class="text-warning mt-1"></i>
+                            <div>
+                                <strong class="d-block">Plotly.js Interactive</strong>
+                                <small class="text-muted">Rich histograms, box plots, radar curves</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="d-flex align-items-start gap-2">
+                            <i data-lucide="cloud" class="text-info mt-1"></i>
+                            <div>
+                                <strong class="d-block">Optional AWS S3</strong>
+                                <small class="text-muted">Disabled by default; opt-in secure archive</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm p-4 bg-white">
+                    <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                        <i data-lucide="folder-tree" class="text-primary"></i> File-First Lakehouse Structure
+                    </h5>
+                    <pre class="bg-dark text-light p-3 rounded font-monospace extra-small mb-0"><code>c:\Student Performance Analytics\data\
+├── raw/            # Untouched original uploads (Immutable)
+├── validated/      # Cleaned, schema-normalized CSV records
+├── processed/      # Partitioned Snappy Parquet dataset
+├── analytics/      # Pre-aggregated JSON/Parquet aggregates
+├── manifests/      # Cryptographic SHA-256 JSON audit trails
+├── jobs/           # Spark batch telemetry heartbeats
+├── drafts/         # In-progress editable class marks
+└── synthetic/      # 1M+ benchmark test datasets</code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Next Phase Banner -->
+<section class="py-5 text-center">
+    <div class="container px-lg-4">
+        <div class="card border-0 bg-primary text-white shadow-lg p-5">
+            <div class="max-w-700 mx-auto">
+                <span class="badge bg-white text-primary fw-bold mb-3">Implementation Phase 1 Complete</span>
+                <h2 class="display-6 fw-bold mb-3 text-white">Foundation Successfully Deployed</h2>
+                <p class="text-white-50 mb-4">
+                    The core skeleton, assessment rules engine, student data masking logging, and web architecture are verified. Ready to initiate <strong>Phase 2: Local Storage Engine & Guided Import Wizard</strong> upon your confirmation.
+                </p>
+                <div class="d-inline-flex gap-3">
+                    <a href="{{ url_for('core.health') }}" target="_blank" class="btn btn-light btn-lg fw-semibold d-flex align-items-center gap-2">
+                        <i data-lucide="check-circle" class="text-success"></i> View Health JSON
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

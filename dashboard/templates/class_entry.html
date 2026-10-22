@@ -1,0 +1,750 @@
+{% extends "base.html" %}
+
+{% block title %}Class Marks Entry — EduPulse Analytics{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-lg-4 py-4">
+    <!-- Header Breadcrumb & Actions -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="{{ url_for('core.landing') }}">Home</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Class Marks Entry</li>
+                </ol>
+            </nav>
+            <h2 class="h3 fw-bold mb-0">Interactive Class-Wise Marks Entry</h2>
+            <p class="text-muted small mb-0">
+                Direct spreadsheet-style entry with live range checking, subject-specific cutoffs, draft autosave, and CSV interoperability.
+            </p>
+        </div>
+
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#draftsModal" onclick="loadDraftsList()">
+                <i data-lucide="folder"></i> Load Draft
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1" onclick="saveCurrentDraft()">
+                <i data-lucide="save"></i> Save Draft
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1" onclick="exportToCSV()">
+                <i data-lucide="download"></i> Export CSV
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1" onclick="document.getElementById('importCsvInput').click()">
+                <i data-lucide="upload"></i> Import CSV
+            </button>
+            <input type="file" id="importCsvInput" class="d-none" accept=".csv" onchange="handleCsvUpload(event)">
+            <button type="button" class="btn btn-success btn-sm d-flex align-items-center gap-1 px-3 shadow-sm" onclick="openReviewModal()">
+                <i data-lucide="check-circle-2"></i> Review & Commit
+            </button>
+        </div>
+    </div>
+
+    <!-- Class Metadata Card -->
+    <div class="card border-0 shadow-sm p-3 mb-3 bg-white">
+        <div class="row g-2 align-items-center">
+            <div class="col-md-2 col-6">
+                <label class="form-label extra-small fw-semibold text-muted text-uppercase mb-1">Department</label>
+                <input type="text" class="form-control form-control-sm" id="metaDept" value="Computer Science">
+            </div>
+            <div class="col-md-2 col-6">
+                <label class="form-label extra-small fw-semibold text-muted text-uppercase mb-1">Batch / Cohort</label>
+                <input type="text" class="form-control form-control-sm" id="metaBatch" value="2023-2027">
+            </div>
+            <div class="col-md-2 col-4">
+                <label class="form-label extra-small fw-semibold text-muted text-uppercase mb-1">Semester</label>
+                <select class="form-select form-select-sm" id="metaSem">
+                    <option value="1">Semester 1</option>
+                    <option value="2">Semester 2</option>
+                    <option value="3" selected>Semester 3</option>
+                    <option value="4">Semester 4</option>
+                    <option value="5">Semester 5</option>
+                    <option value="6">Semester 6</option>
+                    <option value="7">Semester 7</option>
+                    <option value="8">Semester 8</option>
+                </select>
+            </div>
+            <div class="col-md-2 col-4">
+                <label class="form-label extra-small fw-semibold text-muted text-uppercase mb-1">Section</label>
+                <input type="text" class="form-control form-control-sm" id="metaSection" value="A">
+            </div>
+            <div class="col-md-2 col-4">
+                <label class="form-label extra-small fw-semibold text-muted text-uppercase mb-1">Assessment Period</label>
+                <select class="form-select form-select-sm" id="metaPeriod">
+                    <option value="Midterm-1">Midterm 1</option>
+                    <option value="Midterm-2">Midterm 2</option>
+                    <option value="Final-Exam" selected>Final Exam</option>
+                </select>
+            </div>
+            <div class="col-md-2 col-12 text-md-end pt-3 pt-md-0">
+                <button type="button" class="btn btn-outline-primary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#subjectsModal">
+                    <i data-lucide="settings-2"></i> Config Subjects (<span id="subjectCountBadge">3</span>)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spreadsheet Action Controls -->
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-primary btn-sm d-flex align-items-center gap-1" onclick="addNewRow()">
+                <i data-lucide="plus"></i> Add Student Row
+            </button>
+            <button type="button" class="btn btn-outline-danger btn-sm d-flex align-items-center gap-1" onclick="removeSelectedRows()">
+                <i data-lucide="trash-2"></i> Remove Selected
+            </button>
+            <span class="text-muted extra-small ms-2">
+                <span id="rowCountLabel">0</span> Students Entered
+            </span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-light text-muted border extra-small">Tip: Enter "Ab" for Absent</span>
+            <span class="badge bg-light text-muted border extra-small">Range Errors Highlighted Red</span>
+        </div>
+    </div>
+
+    <!-- Editable Spreadsheet Grid -->
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive" style="max-height: 600px;">
+            <table class="table table-bordered table-sm align-middle grid-table mb-0" id="marksGrid">
+                <thead class="table-light sticky-top" id="gridHead">
+                    <!-- Dynamic Headers Rendered Here -->
+                </thead>
+                <tbody id="gridBody">
+                    <!-- Dynamic Student Rows Rendered Here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Subject Configuration Modal -->
+<div class="modal fade" id="subjectsModal" tabindex="-1" aria-labelledby="subjectsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="subjectsModalLabel">Subject Assessment Rules Configuration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-3">
+                    Configure maximum score bounds and passing cutoff marks per subject. These rules govern live grid validation.
+                </p>
+                <div class="table-responsive border rounded mb-3">
+                    <table class="table table-sm align-middle mb-0" id="subjectsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Code</th>
+                                <th>Subject Name</th>
+                                <th>Max Int</th>
+                                <th>Max Ext</th>
+                                <th>Pass Int</th>
+                                <th>Pass Ext</th>
+                                <th>Pass Tot</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="subjectsBody"></tbody>
+                    </table>
+                </div>
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="addNewSubjectConfig()">
+                    <i data-lucide="plus"></i> Add Another Subject
+                </button>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="applySubjectConfiguration()">Apply to Grid</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Drafts Modal -->
+<div class="modal fade" id="draftsModal" tabindex="-1" aria-labelledby="draftsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="draftsModalLabel">Saved In-Progress Drafts</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="list-group list-group-flush" id="draftsList">
+                    <div class="p-3 text-center text-muted small">Loading drafts...</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pre-Commit Review Modal -->
+<div class="modal fade" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="reviewModalLabel">Pre-Commit Review Summary</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- KPI Scorecard -->
+                <div class="row g-3 mb-4 text-center">
+                    <div class="col-4">
+                        <div class="p-3 bg-light rounded border">
+                            <span class="text-muted extra-small text-uppercase fw-semibold">Total Students</span>
+                            <h3 class="mb-0 fw-bold" id="revStudents">-</h3>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="p-3 bg-success-subtle rounded border border-success-subtle">
+                            <span class="text-success extra-small text-uppercase fw-semibold">Class Pass Rate</span>
+                            <h3 class="mb-0 fw-bold text-success" id="revPassRate">-%</h3>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="p-3 bg-primary-subtle rounded border border-primary-subtle">
+                            <span class="text-primary extra-small text-uppercase fw-semibold">Class Average</span>
+                            <h3 class="mb-0 fw-bold text-primary" id="revAverage">-</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-4 text-center">
+                    <div class="col-4">
+                        <div class="p-2 border rounded">
+                            <small class="text-muted d-block">Passed Records</small>
+                            <strong class="text-success" id="revPassed">-</strong>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="p-2 border rounded">
+                            <small class="text-muted d-block">Failed Records</small>
+                            <strong class="text-danger" id="revFailed">-</strong>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="p-2 border rounded">
+                            <small class="text-muted d-block">Absent Records</small>
+                            <strong class="text-warning" id="revAbsent">-</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Audit Remarks / Comments</label>
+                    <textarea class="form-control form-control-sm" id="commitRemarks" rows="2" placeholder="e.g., Final Semester Exam marks committed by HOD."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Back to Editing</button>
+                <button type="button" class="btn btn-success btn-sm px-3" onclick="commitGridData()">
+                    <i data-lucide="check"></i> Confirm & Commit to Lakehouse
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.grid-table {
+    font-size: 0.85rem;
+}
+.grid-table th {
+    text-align: center;
+    vertical-align: middle;
+}
+.grid-table td {
+    padding: 0.25rem 0.35rem;
+}
+.grid-input {
+    width: 100%;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 0.2rem 0.4rem;
+    font-size: 0.85rem;
+    text-align: center;
+    transition: all 0.15s ease;
+}
+.grid-input:focus {
+    border-color: var(--color-primary);
+    background-color: #fff;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+}
+.grid-input.cell-error {
+    border-color: #dc3545 !important;
+    background-color: #f8d7da !important;
+    color: #842029;
+}
+.cell-total {
+    font-weight: 600;
+    text-align: center;
+    display: block;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentDraftId = null;
+let subjects = [
+    { code: "CS301", name: "Data Structures", max_internal: 40, max_external: 60, min_internal_pass: 16, min_external_pass: 24, min_total_pass: 40 },
+    { code: "CS302", name: "Algorithms", max_internal: 40, max_external: 60, min_internal_pass: 16, min_external_pass: 24, min_total_pass: 40 },
+    { code: "CS303", name: "Database Systems", max_internal: 40, max_external: 60, min_internal_pass: 16, min_external_pass: 24, min_total_pass: 40 }
+];
+
+document.addEventListener("DOMContentLoaded", () => {
+    initSubjectConfigModal();
+    renderGridHeaders();
+    // Pre-populate with 5 sample rows
+    for (let i = 1; i <= 5; i++) {
+        addNewRow(`STU2026${String(i).padStart(3, '0')}`);
+    }
+});
+
+function initSubjectConfigModal() {
+    const tbody = document.getElementById("subjectsBody");
+    tbody.innerHTML = "";
+    subjects.forEach((sub, idx) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td><input type="text" class="form-control form-control-sm font-monospace sub-code" value="${sub.code}"></td>
+            <td><input type="text" class="form-control form-control-sm sub-name" value="${sub.name}"></td>
+            <td><input type="number" class="form-control form-control-sm sub-max-int" value="${sub.max_internal}"></td>
+            <td><input type="number" class="form-control form-control-sm sub-max-ext" value="${sub.max_external}"></td>
+            <td><input type="number" class="form-control form-control-sm sub-pass-int" value="${sub.min_internal_pass}"></td>
+            <td><input type="number" class="form-control form-control-sm sub-pass-ext" value="${sub.min_external_pass}"></td>
+            <td><input type="number" class="form-control form-control-sm sub-pass-tot" value="${sub.min_total_pass}"></td>
+            <td class="text-center">
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest('tr').remove()">
+                    <i data-lucide="trash"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+    document.getElementById("subjectCountBadge").textContent = subjects.length;
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function addNewSubjectConfig() {
+    const tbody = document.getElementById("subjectsBody");
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+        <td><input type="text" class="form-control form-control-sm font-monospace sub-code" placeholder="CODE"></td>
+        <td><input type="text" class="form-control form-control-sm sub-name" placeholder="Subject Name"></td>
+        <td><input type="number" class="form-control form-control-sm sub-max-int" value="40"></td>
+        <td><input type="number" class="form-control form-control-sm sub-max-ext" value="60"></td>
+        <td><input type="number" class="form-control form-control-sm sub-pass-int" value="16"></td>
+        <td><input type="number" class="form-control form-control-sm sub-pass-ext" value="24"></td>
+        <td><input type="number" class="form-control form-control-sm sub-pass-tot" value="40"></td>
+        <td class="text-center">
+            <button type="button" class="btn btn-outline-danger btn-sm" onclick="this.closest('tr').remove()">
+                <i data-lucide="trash"></i>
+            </button>
+        </td>
+    `;
+    tbody.appendChild(tr);
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function applySubjectConfiguration() {
+    const rows = document.querySelectorAll("#subjectsBody tr");
+    const updated = [];
+    rows.forEach(r => {
+        const code = r.querySelector(".sub-code").value.trim().toUpperCase();
+        if (code) {
+            updated.push({
+                code: code,
+                name: r.querySelector(".sub-name").value.trim() || code,
+                max_internal: parseFloat(r.querySelector(".sub-max-int").value) || 40,
+                max_external: parseFloat(r.querySelector(".sub-max-ext").value) || 60,
+                min_internal_pass: parseFloat(r.querySelector(".sub-pass-int").value) || 16,
+                min_external_pass: parseFloat(r.querySelector(".sub-pass-ext").value) || 24,
+                min_total_pass: parseFloat(r.querySelector(".sub-pass-tot").value) || 40
+            });
+        }
+    });
+    if (updated.length === 0) {
+        alert("At least one subject is required.");
+        return;
+    }
+    subjects = updated;
+    document.getElementById("subjectCountBadge").textContent = subjects.length;
+    bootstrap.Modal.getInstance(document.getElementById("subjectsModal")).hide();
+    renderGridHeaders();
+}
+
+function renderGridHeaders() {
+    const thead = document.getElementById("gridHead");
+    let row1 = `<tr><th rowspan="2" style="width: 40px;"><input type="checkbox" id="selectAllCheck" onchange="toggleSelectAll(this)"></th><th rowspan="2" style="width: 140px;">Student ID</th>`;
+    let row2 = `<tr>`;
+
+    subjects.forEach(sub => {
+        row1 += `<th colspan="4" class="text-center border-start border-end">${sub.code} — ${sub.name}</th>`;
+        row2 += `
+            <th class="border-start" style="width: 85px;">Int (${sub.max_internal})</th>
+            <th style="width: 85px;">Ext (${sub.max_external})</th>
+            <th style="width: 75px;">Total</th>
+            <th class="border-end" style="width: 85px;">Status</th>
+        `;
+    });
+    row1 += `</tr>`;
+    row2 += `</tr>`;
+
+    thead.innerHTML = row1 + row2;
+    recalculateAllRows();
+}
+
+function addNewRow(studentId = "") {
+    const tbody = document.getElementById("gridBody");
+    const tr = document.createElement("tr");
+
+    let html = `
+        <td class="text-center"><input type="checkbox" class="row-select"></td>
+        <td><input type="text" class="grid-input font-monospace text-start stu-id" value="${studentId}" placeholder="STU-001"></td>
+    `;
+
+    subjects.forEach(sub => {
+        html += `
+            <td class="border-start">
+                <input type="text" class="grid-input marks-int" data-sub="${sub.code}" data-max="${sub.max_internal}" placeholder="0" oninput="handleCellInput(this)">
+            </td>
+            <td>
+                <input type="text" class="grid-input marks-ext" data-sub="${sub.code}" data-max="${sub.max_external}" placeholder="0" oninput="handleCellInput(this)">
+            </td>
+            <td>
+                <span class="cell-total" data-sub="${sub.code}">-</span>
+            </td>
+            <td class="border-end text-center">
+                <span class="badge bg-secondary cell-status" data-sub="${sub.code}">-</span>
+            </td>
+        `;
+    });
+
+    tr.innerHTML = html;
+    tbody.appendChild(tr);
+    updateRowCount();
+}
+
+function removeSelectedRows() {
+    const checked = document.querySelectorAll(".row-select:checked");
+    if (checked.length === 0) {
+        alert("Select at least one row checkbox to remove.");
+        return;
+    }
+    checked.forEach(cb => cb.closest("tr").remove());
+    updateRowCount();
+}
+
+function toggleSelectAll(masterCb) {
+    document.querySelectorAll(".row-select").forEach(cb => cb.checked = masterCb.checked);
+}
+
+function updateRowCount() {
+    const count = document.querySelectorAll("#gridBody tr").length;
+    document.getElementById("rowCountLabel").textContent = count;
+}
+
+function handleCellInput(input) {
+    const val = input.value.trim();
+    const max = parseFloat(input.dataset.max);
+    const tr = input.closest("tr");
+    const subCode = input.dataset.sub;
+
+    if (val === "" || val.toUpperCase() === "AB") {
+        input.classList.remove("cell-error");
+    } else {
+        const num = parseFloat(val);
+        if (isNaN(num) || num < 0 || num > max) {
+            input.classList.add("cell-error");
+        } else {
+            input.classList.remove("cell-error");
+        }
+    }
+
+    recalculateRow(tr, subCode);
+}
+
+function recalculateRow(tr, subCode) {
+    const sub = subjects.find(s => s.code === subCode);
+    if (!sub) return;
+
+    const intInput = tr.querySelector(`.marks-int[data-sub="${subCode}"]`);
+    const extInput = tr.querySelector(`.marks-ext[data-sub="${subCode}"]`);
+    const totalSpan = tr.querySelector(`.cell-total[data-sub="${subCode}"]`);
+    const statusSpan = tr.querySelector(`.cell-status[data-sub="${subCode}"]`);
+
+    const intVal = intInput.value.trim();
+    const extVal = extInput.value.trim();
+
+    if (intVal.toUpperCase() === "AB" || extVal.toUpperCase() === "AB") {
+        totalSpan.textContent = "Ab";
+        statusSpan.className = "badge bg-warning cell-status";
+        statusSpan.textContent = "ABSENT";
+        return;
+    }
+
+    const intNum = parseFloat(intVal);
+    const extNum = parseFloat(extVal);
+
+    if (isNaN(intNum) || isNaN(extNum)) {
+        totalSpan.textContent = "-";
+        statusSpan.className = "badge bg-secondary cell-status";
+        statusSpan.textContent = "-";
+        return;
+    }
+
+    if (intNum < 0 || intNum > sub.max_internal || extNum < 0 || extNum > sub.max_external) {
+        totalSpan.textContent = "Err";
+        statusSpan.className = "badge bg-danger cell-status";
+        statusSpan.textContent = "INVALID";
+        return;
+    }
+
+    const total = Math.round((intNum + extNum) * 100) / 100;
+    totalSpan.textContent = total;
+
+    const isPassed = (intNum >= sub.min_internal_pass && extNum >= sub.min_external_pass && total >= sub.min_total_pass);
+    if (isPassed) {
+        statusSpan.className = "badge bg-success cell-status";
+        statusSpan.textContent = "PASS";
+    } else {
+        statusSpan.className = "badge bg-danger cell-status";
+        statusSpan.textContent = "FAIL";
+    }
+}
+
+function recalculateAllRows() {
+    document.querySelectorAll("#gridBody tr").forEach(tr => {
+        subjects.forEach(sub => recalculateRow(tr, sub.code));
+    });
+}
+
+function extractGridPayload() {
+    const metadata = {
+        department: document.getElementById("metaDept").value.trim(),
+        batch: document.getElementById("metaBatch").value.trim(),
+        semester: parseInt(document.getElementById("metaSem").value),
+        section: document.getElementById("metaSection").value.trim(),
+        assessment_period: document.getElementById("metaPeriod").value
+    };
+
+    const students = [];
+    document.querySelectorAll("#gridBody tr").forEach(tr => {
+        const id = tr.querySelector(".stu-id").value.trim();
+        if (!id) return;
+
+        const marks = {};
+        subjects.forEach(sub => {
+            const intVal = tr.querySelector(`.marks-int[data-sub="${sub.code}"]`).value.trim();
+            const extVal = tr.querySelector(`.marks-ext[data-sub="${sub.code}"]`).value.trim();
+            marks[sub.code] = {
+                internal: intVal,
+                external: extVal
+            };
+        });
+
+        students.push({ student_id: id, marks: marks });
+    });
+
+    return { metadata, subjects, students, draft_id: currentDraftId };
+}
+
+function saveCurrentDraft() {
+    const payload = extractGridPayload();
+    payload.updated_at = new Date().toISOString();
+
+    fetch("/class-entry/api/draft/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === "success") {
+            currentDraftId = data.draft_id;
+            alert("Draft saved successfully! (Draft ID: " + currentDraftId.slice(0, 8) + "...)");
+        } else {
+            alert("Failed to save draft: " + data.error);
+        }
+    })
+    .catch(err => alert("Error saving draft: " + err));
+}
+
+function loadDraftsList() {
+    const container = document.getElementById("draftsList");
+    container.innerHTML = '<div class="p-3 text-center text-muted small">Loading drafts...</div>';
+
+    fetch("/class-entry/api/drafts")
+        .then(res => res.json())
+        .then(data => {
+            if (data.drafts && data.drafts.length > 0) {
+                container.innerHTML = data.drafts.map(d => `
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong class="d-block">${d.metadata ? d.metadata.department : 'General'} — Sem ${d.metadata ? d.metadata.semester : 1}</strong>
+                            <small class="text-muted font-monospace">${d.draft_id.slice(0, 8)}... (${(d.students || []).length} students)</small>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-primary" onclick="loadDraft('${d.draft_id}')">Open</button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteDraft('${d.draft_id}')"><i data-lucide="trash"></i></button>
+                        </div>
+                    </div>
+                `).join("");
+                if (window.lucide) window.lucide.createIcons();
+            } else {
+                container.innerHTML = '<div class="p-4 text-center text-muted">No saved drafts found.</div>';
+            }
+        })
+        .catch(err => container.innerHTML = '<div class="p-3 text-danger">Error: ' + err + '</div>');
+}
+
+function loadDraft(draftId) {
+    fetch(`/class-entry/api/draft/${draftId}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === "success") {
+                const d = data.draft;
+                currentDraftId = d.draft_id;
+                if (d.metadata) {
+                    document.getElementById("metaDept").value = d.metadata.department || "";
+                    document.getElementById("metaBatch").value = d.metadata.batch || "";
+                    document.getElementById("metaSem").value = d.metadata.semester || 1;
+                    document.getElementById("metaSection").value = d.metadata.section || "";
+                    document.getElementById("metaPeriod").value = d.metadata.assessment_period || "Final-Exam";
+                }
+                if (d.subjects && d.subjects.length > 0) {
+                    subjects = d.subjects;
+                    initSubjectConfigModal();
+                    renderGridHeaders();
+                }
+
+                const tbody = document.getElementById("gridBody");
+                tbody.innerHTML = "";
+                (d.students || []).forEach(stu => {
+                    addNewRow(stu.student_id);
+                    const tr = tbody.lastElementChild;
+                    subjects.forEach(sub => {
+                        const sm = (stu.marks || {})[sub.code] || {};
+                        if (sm.internal !== undefined) tr.querySelector(`.marks-int[data-sub="${sub.code}"]`).value = sm.internal;
+                        if (sm.external !== undefined) tr.querySelector(`.marks-ext[data-sub="${sub.code}"]`).value = sm.external;
+                    });
+                });
+                recalculateAllRows();
+                bootstrap.Modal.getInstance(document.getElementById("draftsModal")).hide();
+            }
+        });
+}
+
+function deleteDraft(draftId) {
+    if (!confirm("Are you sure you want to delete this draft?")) return;
+    fetch(`/class-entry/api/draft/${draftId}`, { method: "DELETE" })
+        .then(res => res.json())
+        .then(() => loadDraftsList());
+}
+
+function openReviewModal() {
+    const payload = extractGridPayload();
+    if (payload.students.length === 0) {
+        alert("Please enter at least one student row before reviewing.");
+        return;
+    }
+
+    fetch("/class-entry/api/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === "success") {
+            const s = data.summary;
+            document.getElementById("revStudents").textContent = s.total_students;
+            document.getElementById("revPassRate").textContent = s.pass_percentage + "%";
+            document.getElementById("revAverage").textContent = s.average_score;
+            document.getElementById("revPassed").textContent = s.passed_records;
+            document.getElementById("revFailed").textContent = s.failed_records;
+            document.getElementById("revAbsent").textContent = s.absent_records;
+
+            const modal = new bootstrap.Modal(document.getElementById("reviewModal"));
+            modal.show();
+        } else {
+            alert("Validation Error: " + data.error);
+        }
+    })
+    .catch(err => alert("Validation request failed: " + err));
+}
+
+function commitGridData() {
+    const payload = extractGridPayload();
+    payload.comments = document.getElementById("commitRemarks").value;
+
+    fetch("/class-entry/api/commit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === "success") {
+            alert("Class marks committed successfully to Lakehouse!");
+            window.location.href = data.redirect_url;
+        } else {
+            alert("Commit failed: " + data.error);
+        }
+    })
+    .catch(err => alert("Commit error: " + err));
+}
+
+function exportToCSV() {
+    const payload = extractGridPayload();
+    fetch("/class-entry/api/export-csv", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `class_marks_${payload.metadata.department || 'marks'}.csv`;
+        a.click();
+    });
+}
+
+function handleCsvUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("subjects", JSON.stringify(subjects));
+
+    fetch("/class-entry/api/import-csv", { method: "POST", body: formData })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === "success") {
+                const tbody = document.getElementById("gridBody");
+                tbody.innerHTML = "";
+                data.students.forEach(stu => {
+                    addNewRow(stu.student_id);
+                    const tr = tbody.lastElementChild;
+                    subjects.forEach(sub => {
+                        const sm = (stu.marks || {})[sub.code] || {};
+                        if (sm.internal !== undefined) tr.querySelector(`.marks-int[data-sub="${sub.code}"]`).value = sm.internal;
+                        if (sm.external !== undefined) tr.querySelector(`.marks-ext[data-sub="${sub.code}"]`).value = sm.external;
+                    });
+                });
+                recalculateAllRows();
+                alert(`Successfully loaded ${data.count} student rows into grid!`);
+            } else {
+                alert("Failed to parse CSV: " + data.error);
+            }
+        });
+}
+</script>
+{% endblock %}

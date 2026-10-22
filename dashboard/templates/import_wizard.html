@@ -1,0 +1,809 @@
+{% extends "base.html" %}
+
+{% block title %}Universal Academic Assessment Import Engine — EduPulse Analytics{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+            <li class="breadcrumb-item"><a href="{{ url_for('core.landing') }}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('data.catalog') }}">Data Management</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Universal Import Wizard</li>
+        </ol>
+    </nav>
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h2 class="h3 fw-bold mb-0">Universal Guided Spreadsheet Ingestion Engine</h2>
+            <p class="text-muted small mb-0">
+                Ingest diverse academic assessment formats: Semester Exams, Midterms (Mid-1/2), Internals, Labs, Practicals, Quizzes, and Assignments across Wide & Long layouts.
+            </p>
+        </div>
+        <a href="{{ url_for('data.catalog') }}" class="btn btn-outline-secondary btn-sm">
+            <i data-lucide="arrow-left"></i> Back to Catalog
+        </a>
+    </div>
+
+    <!-- Stepper Indicator -->
+    <div class="card border-0 shadow-sm p-3 mb-4 bg-white">
+        <div class="d-flex justify-content-between position-relative stepper-bar">
+            <div class="step-indicator active" id="stepIndicator1">
+                <span class="step-circle">1</span>
+                <span class="step-label">Upload File</span>
+            </div>
+            <div class="step-indicator" id="stepIndicator2">
+                <span class="step-circle">2</span>
+                <span class="step-label">Configure & Map</span>
+            </div>
+            <div class="step-indicator" id="stepIndicator3">
+                <span class="step-circle">3</span>
+                <span class="step-label">Live Preview & Scorecard</span>
+            </div>
+            <div class="step-indicator" id="stepIndicator4">
+                <span class="step-circle">4</span>
+                <span class="step-label">Audit Manifest</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 1: File Upload -->
+    <div class="wizard-step" id="step1">
+        <div class="card border-0 shadow-sm p-4 text-center">
+            <div class="upload-dropzone p-5 border border-2 border-dashed rounded-3 bg-light-subtle" id="dropzone">
+                <div class="icon-box bg-primary-subtle text-primary mx-auto mb-3" style="width: 60px; height: 60px;">
+                    <i data-lucide="upload-cloud" style="width: 32px; height: 32px;"></i>
+                </div>
+                <h4 class="fw-bold mb-1">Drag and drop your academic spreadsheet</h4>
+                <p class="text-muted small mb-3">Supports CSV (auto delimiter/encoding), Excel XLSX, and legacy XLS workbooks</p>
+                
+                <input type="file" id="fileInput" class="d-none" accept=".csv, .xlsx, .xlsm, .xls">
+                <button type="button" class="btn btn-primary px-4 shadow-sm" onclick="document.getElementById('fileInput').click()">
+                    Browse Local File
+                </button>
+                <div id="fileSelectedInfo" class="mt-3 text-success fw-semibold d-none"></div>
+            </div>
+
+            <div class="row g-3 mt-3 text-start">
+                <div class="col-md-3">
+                    <div class="p-3 bg-white border rounded">
+                        <small class="text-muted d-block fw-semibold text-uppercase extra-small">Universal Layouts</small>
+                        <span class="small">Auto-detects Wide matrices (unpivoting subjects) and Long tabular records.</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 bg-white border rounded">
+                        <small class="text-muted d-block fw-semibold text-uppercase extra-small">Smart Header Detection</small>
+                        <span class="small">Filters out multi-line college title banners and skips empty rows safely.</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 bg-white border rounded">
+                        <small class="text-muted d-block fw-semibold text-uppercase extra-small">Roll Number Integrity</small>
+                        <span class="small">Protects leading zeroes on student IDs and distinguishes serial numbers (S.No).</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 bg-white border rounded">
+                        <small class="text-muted d-block fw-semibold text-uppercase extra-small">Formula Defense</small>
+                        <span class="small">Neutralizes spreadsheet injection (<code>=,+,-,@</code>) per CWE-1236.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2: Mapping & Model Configuration -->
+    <div class="wizard-step d-none" id="step2">
+        <div class="card border-0 shadow-sm p-4 mb-4">
+            <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                <i data-lucide="sliders" class="text-primary"></i> Workbook Inspection & Assessment Setup
+            </h5>
+
+            <!-- Banner Alert -->
+            <div id="bannerAlert" class="alert alert-info py-2 px-3 mb-3 d-none">
+                <div class="d-flex align-items-center gap-2">
+                    <i data-lucide="info" class="text-info flex-shrink-0"></i>
+                    <div class="small">
+                        <strong>Institutional Banner Detected:</strong> <span id="bannerText"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row g-3 mb-3">
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold small">Worksheet</label>
+                    <select class="form-select form-select-sm" id="sheetSelect"></select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold small">Header Row (0-Indexed)</label>
+                    <input type="number" class="form-control form-control-sm" id="headerRowInput" value="0" min="0" max="25">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold small">Academic Model</label>
+                    <select class="form-select form-select-sm" id="modelSelect">
+                        <option value="marks_based">Marks-Based (Numeric Marks)</option>
+                        <option value="grade_based">Grade-Based (Letter Grades & SGPA)</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold small">Target Batch / Project <span class="text-danger">*</span></label>
+                    <select class="form-select form-select-sm" id="projectSelect">
+                        {% for p in all_projects %}
+                        <option value="{{ p.project_id }}" {% if active_project and p.project_id == active_project.project_id %}selected{% endif %}>
+                            {{ p.name }} ({{ p.degree }} · {{ p.department_code }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold small">Evaluation / Assessment Type</label>
+                    <select class="form-select form-select-sm" id="assessmentTypeSelect">
+                        <option value="internal" selected>Internal Assessment / CIA (Mid Exams & Sessional)</option>
+                        <option value="mid_1">Mid-1 Examination</option>
+                        <option value="mid_2">Mid-2 Examination</option>
+                        <option value="semester_exam">Semester Examination / Regular Results</option>
+                        <option value="laboratory">Laboratory / Practical Examination</option>
+                        <option value="assignment">Assignment / Continuous Evaluation</option>
+                        <option value="quiz">Quiz / Objective Test</option>
+                        <option value="project">Project / Presentation</option>
+                        <option value="viva">Viva Voce</option>
+                        <option value="custom">Custom Assessment</option>
+                    </select>
+                    <div class="form-text extra-small text-muted mt-1">
+                        <i data-lucide="info" style="width: 12px; height: 12px;" class="me-1"></i> For marksheets with mixed Theory and Lab courses (e.g. BDA, ML and BDA&CC LAB), EduPulse automatically detects and separates laboratory columns with practical evaluation attributes.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table Layout Selector -->
+            <div class="card bg-light-subtle border p-3 mb-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                    <div>
+                        <span class="fw-bold small text-uppercase text-muted d-block">Table Layout Structure</span>
+                        <div class="form-check form-check-inline mt-1">
+                            <input class="form-check-input" type="radio" name="layoutRadio" id="layoutWide" value="wide" checked>
+                            <label class="form-check-label fw-semibold small" for="layoutWide">
+                                Wide Matrix <span class="text-muted fw-normal">(One row per student, subjects across columns)</span>
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline mt-1">
+                            <input class="form-check-input" type="radio" name="layoutRadio" id="layoutLong" value="long">
+                            <label class="form-check-label fw-semibold small" for="layoutLong">
+                                Long Tabular <span class="text-muted fw-normal">(One row per student-subject record)</span>
+                            </label>
+                        </div>
+                    </div>
+                    <span id="detectedLayoutBadge" class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                        Auto-detected: Wide Matrix
+                    </span>
+                </div>
+            </div>
+
+            <!-- WIDE LAYOUT CONFIGURATION SECTION -->
+            <div id="wideConfigSection">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold small">Student ID Column <span class="text-danger">*</span></label>
+                        <select class="form-select form-select-sm" id="wideStudentIdSelect"></select>
+                        <div class="form-text extra-small text-muted">Serial numbers (S.No) are automatically excluded.</div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold small">Student Name Column (Optional)</label>
+                        <select class="form-select form-select-sm" id="wideStudentNameSelect">
+                            <option value="">-- None / In Student ID --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold small">Default Semester</label>
+                        <input type="number" class="form-control form-control-sm" id="wideDefaultSemester" value="1" min="1" max="12">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold small">Default Department</label>
+                        <input type="text" class="form-control form-control-sm" id="wideDefaultDept" value="General">
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold small">Default Max Marks</label>
+                        <input type="number" class="form-control form-control-sm" id="wideDefaultMaxMarks" placeholder="e.g. 40">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold small">Default Pass Marks</label>
+                        <input type="number" class="form-control form-control-sm" id="wideDefaultPassMarks" placeholder="e.g. 16">
+                    </div>
+                </div>
+
+                <!-- Subject Columns Selection -->
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h6 class="fw-bold mb-0">Select Subject Columns to Unpivot</h6>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="toggleAllSubjects(true)">Select All</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="toggleAllSubjects(false)">Deselect All</button>
+                    </div>
+                </div>
+                <p class="text-muted extra-small mb-3">
+                    Each checked column will be converted into individual canonical assessment records.
+                </p>
+
+                <div class="p-3 border rounded bg-white mb-4" style="max-height: 220px; overflow-y: auto;">
+                    <div class="row g-2" id="subjectPillsContainer"></div>
+                </div>
+            </div>
+
+            <!-- LONG LAYOUT MAPPING SECTION -->
+            <div id="longConfigSection" class="d-none">
+                <h6 class="fw-bold mb-2">Column Mapping Matrix</h6>
+                <p class="text-muted small mb-3">
+                    Associate each canonical system field with its corresponding column header.
+                </p>
+                <div class="table-responsive border rounded mb-4">
+                    <table class="table table-sm align-middle mb-0" id="mappingTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3">Canonical System Field</th>
+                                <th>Requirement</th>
+                                <th>Matching Spreadsheet Header</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mappingBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary" onclick="goToStep(1)">
+                    <i data-lucide="arrow-left"></i> Back
+                </button>
+                <button type="button" class="btn btn-primary" onclick="generatePreview()">
+                    Generate Live Preview & Validate <i data-lucide="arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 3: Preview & Validation Tally -->
+    <div class="wizard-step d-none" id="step3">
+        <div class="card border-0 shadow-sm p-4 mb-4">
+            <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                <i data-lucide="clipboard-check" class="text-primary"></i> Live Preview & Pre-Commit Scorecard
+            </h5>
+
+            <!-- Scorecard Cards -->
+            <div class="row g-3 mb-4" id="scorecardRow">
+                <div class="col-6 col-md-3">
+                    <div class="p-3 bg-light-subtle rounded border text-center">
+                        <span class="text-muted extra-small text-uppercase fw-semibold">Sample Processed</span>
+                        <h4 class="mb-0 fw-bold" id="tallySampleTotal">-</h4>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 bg-success-subtle rounded border border-success-subtle text-center">
+                        <span class="text-success extra-small text-uppercase fw-semibold">Accepted Records</span>
+                        <h4 class="mb-0 fw-bold text-success" id="tallySampleAccepted">-</h4>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 bg-danger-subtle rounded border border-danger-subtle text-center">
+                        <span class="text-danger extra-small text-uppercase fw-semibold">Errors / Rejections</span>
+                        <h4 class="mb-0 fw-bold text-danger" id="tallySampleErrors">-</h4>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-3 bg-warning-subtle rounded border border-warning-subtle text-center">
+                        <span class="text-warning extra-small text-uppercase fw-semibold">Warnings / Incomplete</span>
+                        <h4 class="mb-0 fw-bold text-warning" id="tallySampleWarnings">-</h4>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Issues Drawer -->
+            <div id="issuesAlert" class="alert alert-warning d-none mb-3">
+                <h6 class="alert-heading fw-bold mb-1">Pre-Flight Validation Notices</h6>
+                <ul class="mb-0 small ps-3" id="issuesList"></ul>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <h6 class="fw-bold mb-0">Normalized Canonical Records Preview (First 25 Rows)</h6>
+                <span class="badge bg-secondary-subtle text-secondary" id="totalUnpivotedBadge"></span>
+            </div>
+            
+            <div class="table-responsive border rounded mb-4" style="max-height: 380px;">
+                <table class="table table-sm table-striped table-hover small mb-0" id="previewTable">
+                    <thead class="table-light sticky-top" id="previewHead"></thead>
+                    <tbody id="previewBody"></tbody>
+                </table>
+            </div>
+
+            <div class="d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary" onclick="goToStep(2)">
+                    <i data-lucide="arrow-left"></i> Adjust Configuration
+                </button>
+                <button type="button" class="btn btn-success px-4" onclick="goToStep(4)">
+                    Proceed to Commit Manifest <i data-lucide="check-circle"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 4: Commit & Final Confirmation -->
+    <div class="wizard-step d-none" id="step4">
+        <div class="card border-0 shadow-sm p-4 mb-4 text-center">
+            <div class="icon-box bg-success-subtle text-success mx-auto mb-3" style="width: 64px; height: 64px;">
+                <i data-lucide="file-check-2" style="width: 32px; height: 32px;"></i>
+            </div>
+            <h4 class="fw-bold mb-1">Ready to Commit Academic Dataset</h4>
+            <p class="text-muted max-w-700 mx-auto small mb-4">
+                Confirming will permanently save the untouched raw spreadsheet to <code>data/raw/</code>, persist the schema-normalized records to <code>data/validated/VAL_&lt;id&gt;.csv</code>, and sign an immutable cryptographic JSON audit manifest in <code>data/manifests/</code>.
+            </p>
+
+            <div class="max-w-700 mx-auto text-start w-100 mb-4">
+                <label class="form-label small fw-semibold">Dataset Audit Comments (Optional)</label>
+                <textarea class="form-control form-control-sm" id="commitComments" rows="2" placeholder="e.g., CSE Sem 6 Mid-1 internal results uploaded by Department Coordinator"></textarea>
+            </div>
+
+            <div id="commitLoading" class="my-4 d-none">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="small text-muted mt-2">Normalizing records, evaluating pass/fail status, and signing manifest...</p>
+            </div>
+
+            <div class="d-flex justify-content-center gap-3">
+                <button type="button" class="btn btn-outline-secondary" onclick="goToStep(3)" id="btnBackTo3">
+                    <i data-lucide="arrow-left"></i> Back to Preview
+                </button>
+                <button type="button" class="btn btn-primary px-4 shadow-sm" onclick="executeCommit()" id="btnCommit">
+                    <i data-lucide="save"></i> Confirm & Commit Import
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.stepper-bar {
+    max-width: 800px;
+    margin: 0 auto;
+}
+.step-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    z-index: 2;
+}
+.step-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: var(--color-border);
+    color: var(--color-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+.step-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--color-muted);
+    text-transform: uppercase;
+}
+.step-indicator.active .step-circle {
+    background-color: var(--color-primary);
+    color: white;
+}
+.step-indicator.active .step-label {
+    color: var(--color-primary);
+}
+.upload-dropzone {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.upload-dropzone:hover {
+    border-color: var(--color-primary) !important;
+    background-color: var(--color-primary-subtle) !important;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentFile = null;
+let inspectionData = null;
+let currentMappings = {};
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+
+// Drag and drop setup
+['dragenter', 'dragover'].forEach(event => {
+    dropzone.addEventListener(event, e => { e.preventDefault(); dropzone.classList.add('border-primary'); });
+});
+['dragleave', 'drop'].forEach(event => {
+    dropzone.addEventListener(event, e => { e.preventDefault(); dropzone.classList.remove('border-primary'); });
+});
+dropzone.addEventListener('drop', e => {
+    if (e.dataTransfer.files.length) {
+        handleFileSelect(e.dataTransfer.files[0]);
+    }
+});
+fileInput.addEventListener('change', e => {
+    if (e.target.files.length) {
+        handleFileSelect(e.target.files[0]);
+    }
+});
+
+function handleFileSelect(file) {
+    currentFile = file;
+    const info = document.getElementById('fileSelectedInfo');
+    info.textContent = `Selected: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
+    info.classList.remove('d-none');
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    fetch('/data-management/api/inspect', { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                inspectionData = data.inspection;
+                populateStep2(inspectionData);
+                goToStep(2);
+            } else {
+                alert('Inspection error: ' + data.error);
+            }
+        })
+        .catch(err => alert('Upload failed: ' + err));
+}
+
+function populateStep2(data) {
+    // 1. Populate Sheets
+    const sheetSelect = document.getElementById('sheetSelect');
+    sheetSelect.innerHTML = '';
+    data.sheets.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        if (s === data.selected_sheet) opt.selected = true;
+        sheetSelect.appendChild(opt);
+    });
+
+    // 2. Banner detection
+    const bannerAlert = document.getElementById('bannerAlert');
+    const bannerText = document.getElementById('bannerText');
+    if (data.banner_text && data.banner_text.trim()) {
+        bannerText.textContent = data.banner_text;
+        bannerAlert.classList.remove('d-none');
+    } else {
+        bannerAlert.classList.add('d-none');
+    }
+
+    // 3. Header row and model
+    document.getElementById('headerRowInput').value = data.detected_header_row;
+    document.getElementById('modelSelect').value = data.suggested_model;
+    if (data.suggested_assessment_type) {
+        document.getElementById('assessmentTypeSelect').value = data.suggested_assessment_type;
+    }
+
+    // 4. Layout selector
+    const isWide = (data.detected_layout === 'wide');
+    document.getElementById('layoutWide').checked = isWide;
+    document.getElementById('layoutLong').checked = !isWide;
+    document.getElementById('detectedLayoutBadge').textContent = isWide ? 'Auto-detected: Wide Matrix' : 'Auto-detected: Long Tabular';
+    updateLayoutVisibility(isWide ? 'wide' : 'long');
+
+    // 5. Populate Wide student selectors
+    populateWideSelectors(data);
+
+    // 6. Populate Long mapping table
+    renderMappingTable(data.suggested_model);
+}
+
+function populateWideSelectors(data) {
+    const sIdSelect = document.getElementById('wideStudentIdSelect');
+    const sNameSelect = document.getElementById('wideStudentNameSelect');
+    sIdSelect.innerHTML = '';
+    sNameSelect.innerHTML = '<option value="">-- None / In Student ID --</option>';
+
+    data.raw_headers.forEach(h => {
+        // Option for ID
+        const optId = document.createElement('option');
+        optId.value = h;
+        optId.textContent = h;
+        if (h === data.detected_student_id_column) optId.selected = true;
+        sIdSelect.appendChild(optId);
+
+        // Option for Name
+        const optName = document.createElement('option');
+        optName.value = h;
+        optName.textContent = h;
+        if (h === data.detected_student_name_column) optName.selected = true;
+        sNameSelect.appendChild(optName);
+    });
+
+    // Populate Subject check pills
+    const container = document.getElementById('subjectPillsContainer');
+    container.innerHTML = '';
+
+    const candidateSubjects = data.candidate_subject_columns || [];
+    const metaList = data.candidate_subject_columns_meta || [];
+    const metaMap = {};
+    metaList.forEach(m => { metaMap[m.column_name] = m; });
+
+    candidateSubjects.forEach(col => {
+        const meta = metaMap[col] || { is_lab: /lab|practical|workshop/i.test(col) };
+        const badgeClass = meta.is_lab ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-primary-subtle text-primary border border-primary-subtle';
+        const badgeText = meta.is_lab ? 'Lab / Practical' : 'Theory';
+
+        const colDiv = document.createElement('div');
+        colDiv.className = 'col-md-4 col-sm-6';
+        colDiv.innerHTML = `
+            <div class="form-check form-check-inline border rounded p-2 w-100 bg-light d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center text-truncate" style="max-width: 65%;">
+                    <input class="form-check-input subject-col-check ms-1" type="checkbox" value="${col}" id="chk_${col}" checked>
+                    <label class="form-check-label small fw-semibold text-truncate ms-2" for="chk_${col}" title="${col}">
+                        ${col.replace(/\n/g, ' ')}
+                    </label>
+                </div>
+                <span class="badge ${badgeClass} extra-small px-2 py-1">${badgeText}</span>
+            </div>
+        `;
+        container.appendChild(colDiv);
+    });
+}
+
+function toggleAllSubjects(selectState) {
+    document.querySelectorAll('.subject-col-check').forEach(chk => {
+        chk.checked = selectState;
+    });
+}
+
+// Layout Radio Change
+document.querySelectorAll('input[name="layoutRadio"]').forEach(radio => {
+    radio.addEventListener('change', e => {
+        updateLayoutVisibility(e.target.value);
+    });
+});
+
+function updateLayoutVisibility(layout) {
+    if (layout === 'wide') {
+        document.getElementById('wideConfigSection').classList.remove('d-none');
+        document.getElementById('longConfigSection').classList.add('d-none');
+    } else {
+        document.getElementById('wideConfigSection').classList.add('d-none');
+        document.getElementById('longConfigSection').classList.remove('d-none');
+    }
+}
+
+document.getElementById('modelSelect').addEventListener('change', e => {
+    renderMappingTable(e.target.value);
+});
+
+function renderMappingTable(model) {
+    const canonicalFields = (model === 'marks_based') 
+        ? ["student_id", "subject_code", "subject_name", "internal_marks", "external_marks", "semester", "department", "batch", "section", "academic_year", "attendance_pct"]
+        : ["student_id", "subject_code", "subject_name", "letter_grade", "course_credits", "sgpa", "semester", "department", "exam_type", "academic_year"];
+
+    const tbody = document.getElementById('mappingBody');
+    tbody.innerHTML = '';
+
+    canonicalFields.forEach(field => {
+        const tr = document.createElement('tr');
+        const isRequired = (field === 'student_id');
+        
+        let selectHtml = `<select class="form-select form-select-sm mapping-select" data-canonical="${field}">`;
+        selectHtml += `<option value="">-- Ignore Column --</option>`;
+        
+        const suggested = inspectionData.suggested_mappings[field] || '';
+        inspectionData.raw_headers.forEach(h => {
+            const selected = (h.toLowerCase() === suggested.toLowerCase()) ? 'selected' : '';
+            selectHtml += `<option value="${h}" ${selected}>${h}</option>`;
+        });
+        selectHtml += `</select>`;
+
+        tr.innerHTML = `
+            <td class="ps-3"><code>${field}</code></td>
+            <td>${isRequired ? '<span class="badge bg-danger">Required</span>' : '<span class="badge bg-secondary">Optional</span>'}</td>
+            <td>${selectHtml}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function collectMappings() {
+    const mappings = {};
+    document.querySelectorAll('.mapping-select').forEach(sel => {
+        const canonical = sel.getAttribute('data-canonical');
+        const source = sel.value;
+        if (source) mappings[canonical] = source;
+    });
+    return mappings;
+}
+
+function collectSelectedSubjects() {
+    const selected = [];
+    document.querySelectorAll('.subject-col-check:checked').forEach(chk => {
+        selected.push(chk.value);
+    });
+    return selected;
+}
+
+function generatePreview() {
+    const layout = document.querySelector('input[name="layoutRadio"]:checked').value;
+    const formData = new FormData();
+    formData.append('file', currentFile);
+    formData.append('sheet_name', document.getElementById('sheetSelect').value);
+    formData.append('header_row', document.getElementById('headerRowInput').value);
+    formData.append('model_type', document.getElementById('modelSelect').value);
+    formData.append('layout', layout);
+    formData.append('assessment_type', document.getElementById('assessmentTypeSelect').value);
+
+    if (layout === 'wide') {
+        const sId = document.getElementById('wideStudentIdSelect').value;
+        const sName = document.getElementById('wideStudentNameSelect').value;
+        const subjects = collectSelectedSubjects();
+
+        if (!sId) {
+            alert('Please select a Student ID column.');
+            return;
+        }
+        if (subjects.length === 0) {
+            alert('Please select at least one subject column to unpivot.');
+            return;
+        }
+
+        formData.append('student_id_col', sId);
+        if (sName) formData.append('student_name_col', sName);
+        formData.append('subject_cols', JSON.stringify(subjects));
+        formData.append('default_semester', document.getElementById('wideDefaultSemester').value);
+        formData.append('default_department', document.getElementById('wideDefaultDept').value);
+        if (document.getElementById('wideDefaultMaxMarks').value) {
+            formData.append('default_max_marks', document.getElementById('wideDefaultMaxMarks').value);
+        }
+        if (document.getElementById('wideDefaultPassMarks').value) {
+            formData.append('default_pass_marks', document.getElementById('wideDefaultPassMarks').value);
+        }
+    } else {
+        currentMappings = collectMappings();
+        formData.append('mappings', JSON.stringify(currentMappings));
+    }
+
+    fetch('/data-management/api/preview', { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                renderPreviewTable(data.preview);
+                goToStep(3);
+            } else {
+                alert('Preview error: ' + data.error);
+            }
+        })
+        .catch(err => alert('Preview failed: ' + err));
+}
+
+function renderPreviewTable(preview) {
+    const tally = preview.sample_tally;
+    document.getElementById('tallySampleTotal').textContent = tally.total_raw_rows;
+    document.getElementById('tallySampleAccepted').textContent = tally.accepted_rows;
+    document.getElementById('tallySampleErrors').textContent = tally.error_count;
+    document.getElementById('tallySampleWarnings').textContent = tally.warning_count;
+
+    if (preview.total_unpivoted_count) {
+        document.getElementById('totalUnpivotedBadge').textContent = `Total unpivoted records: ${preview.total_unpivoted_count}`;
+    }
+
+    const alertBox = document.getElementById('issuesAlert');
+    const issuesList = document.getElementById('issuesList');
+    if (tally.sample_errors && tally.sample_errors.length > 0) {
+        issuesList.innerHTML = tally.sample_errors.map(err => `<li>${err}</li>`).join('');
+        alertBox.classList.remove('d-none');
+    } else {
+        alertBox.classList.add('d-none');
+    }
+
+    // Build Table
+    const thead = document.getElementById('previewHead');
+    const tbody = document.getElementById('previewBody');
+    thead.innerHTML = '';
+    tbody.innerHTML = '';
+
+    if (preview.columns && preview.columns.length) {
+        const headerTr = document.createElement('tr');
+        preview.columns.forEach(col => {
+            const th = document.createElement('th');
+            th.textContent = col;
+            headerTr.appendChild(th);
+        });
+        thead.appendChild(headerTr);
+
+        preview.preview_rows.forEach(row => {
+            const tr = document.createElement('tr');
+            preview.columns.forEach(col => {
+                const td = document.createElement('td');
+                td.textContent = (row[col] !== null && row[col] !== undefined) ? row[col] : '-';
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+    }
+}
+
+function executeCommit() {
+    const btnCommit = document.getElementById('btnCommit');
+    const btnBack = document.getElementById('btnBackTo3');
+    const loading = document.getElementById('commitLoading');
+
+    btnCommit.disabled = true;
+    btnBack.disabled = true;
+    loading.classList.remove('d-none');
+
+    const layout = document.querySelector('input[name="layoutRadio"]:checked').value;
+    const formData = new FormData();
+    formData.append('file', currentFile);
+    formData.append('sheet_name', document.getElementById('sheetSelect').value);
+    formData.append('header_row', document.getElementById('headerRowInput').value);
+    formData.append('model_type', document.getElementById('modelSelect').value);
+    formData.append('layout', layout);
+    formData.append('assessment_type', document.getElementById('assessmentTypeSelect').value);
+    formData.append('comments', document.getElementById('commitComments').value);
+    if (document.getElementById('projectSelect')) {
+        formData.append('project_id', document.getElementById('projectSelect').value);
+    }
+
+    if (layout === 'wide') {
+        const sId = document.getElementById('wideStudentIdSelect').value;
+        const sName = document.getElementById('wideStudentNameSelect').value;
+        const subjects = collectSelectedSubjects();
+
+        formData.append('student_id_col', sId);
+        if (sName) formData.append('student_name_col', sName);
+        formData.append('subject_cols', JSON.stringify(subjects));
+        formData.append('default_semester', document.getElementById('wideDefaultSemester').value);
+        formData.append('default_department', document.getElementById('wideDefaultDept').value);
+        if (document.getElementById('wideDefaultMaxMarks').value) {
+            formData.append('default_max_marks', document.getElementById('wideDefaultMaxMarks').value);
+        }
+        if (document.getElementById('wideDefaultPassMarks').value) {
+            formData.append('default_pass_marks', document.getElementById('wideDefaultPassMarks').value);
+        }
+    } else {
+        formData.append('mappings', JSON.stringify(currentMappings));
+    }
+
+    fetch('/data-management/api/commit', { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                window.location.href = data.redirect_url;
+            } else {
+                alert('Commit failed: ' + data.error);
+                btnCommit.disabled = false;
+                btnBack.disabled = false;
+                loading.classList.add('d-none');
+            }
+        })
+        .catch(err => {
+            alert('Commit error: ' + err);
+            btnCommit.disabled = false;
+            btnBack.disabled = false;
+            loading.classList.add('d-none');
+        });
+}
+
+function goToStep(stepNum) {
+    for (let i = 1; i <= 4; i++) {
+        document.getElementById(`step${i}`).classList.toggle('d-none', i !== stepNum);
+        const ind = document.getElementById(`stepIndicator${i}`);
+        if (ind) ind.classList.toggle('active', i <= stepNum);
+    }
+    if (window.lucide) window.lucide.createIcons();
+}
+</script>
+{% endblock %}
